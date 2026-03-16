@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --color-background-dark: #0f172a;
+    --color-foreground-dark: #ffffff;
+  }
+
+  /* Dark mode by default */
+  html.dark, html {
+    --background: var(--color-background-dark);
+    --foreground: var(--color-foreground-dark);
+    color-scheme: dark;
+  }
+
+  html.light {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    color-scheme: light;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-slate-800 border border-slate-700 rounded-xl shadow-sm transition-all duration-200 ease-in-out;
+  }
+  html.light .card {
+    @apply bg-white border-slate-200;
+  }
+  .card-hover:hover {
+    @apply shadow-md -translate-y-1;
+  }
+  html.light .card-hover:hover {
+    @apply shadow-lg;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply bg-amber-500 text-white hover:bg-amber-600;
+  }
+  .btn-secondary {
+    @apply bg-slate-700 text-white hover:bg-slate-600;
+  }
+  html.light .btn-secondary {
+    @apply bg-slate-100 text-slate-900 hover:bg-slate-200;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+  .btn-ghost {
+    @apply hover:bg-slate-800;
+  }
+  html.light .btn-ghost {
+    @apply hover:bg-slate-100;
+  }
+  .btn-sm {
+    @apply h-9 px-3 text-sm;
+  }
+  .btn-md {
+    @apply h-10 px-4 py-2;
+  }
+
+  /* Tables */
+  .table-container {
+    @apply w-full overflow-auto rounded-xl border border-slate-700 bg-slate-800;
+  }
+  html.light .table-container {
+    @apply border-slate-200 bg-white;
+  }
+  .data-table {
+    @apply w-full text-sm text-left;
+  }
+  .data-table th {
+    @apply px-4 py-3 bg-slate-900/50 font-semibold text-slate-300;
+  }
+  html.light .data-table th {
+    @apply bg-slate-50 text-slate-700;
+  }
+  .data-table td {
+    @apply px-4 py-3 border-t border-slate-700;
+  }
+  html.light .data-table td {
+    @apply border-slate-100;
+  }
+  .data-table tbody tr {
+    @apply hover:bg-slate-700/50 transition-colors;
+  }
+  html.light .data-table tbody tr {
+    @apply hover:bg-slate-50;
+  }
+  
+  /* Inputs */
+  .input {
+    @apply flex h-10 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  html.light .input {
+    @apply border-slate-300 bg-white placeholder:text-slate-400;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .badge-primary {
+    @apply bg-amber-500/20 text-amber-500;
+  }
+  .badge-secondary {
+    @apply bg-slate-700 text-slate-300;
+  }
+  html.light .badge-secondary {
+    @apply bg-slate-100 text-slate-700;
+  }
+  .badge-success {
+    @apply bg-green-500/20 text-green-400;
+  }
+  html.light .badge-success {
+    @apply text-green-700;
+  }
+  .badge-danger {
+    @apply bg-red-500/20 text-red-400;
+  }
+  html.light .badge-danger {
+    @apply text-red-700;
+  }
+}

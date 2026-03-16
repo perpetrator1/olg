@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Open Learn Grid</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            yellow: '#FFD756',
+                            dark: '#0F141E',
+                            card: '#222836',
+                            border: '#303A4A',
+                            text: '#C9D1D9',
+                            muted: '#8B949E',
+                            blue: '#58A6FF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style data-purpose="base-styles">
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            background-color: #181E29;
+            color: #C9D1D9;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #181E29;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #303A4A;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8B949E;
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col">
+    <div class="absolute top-0 left-0 w-full h-[400px] bg-brand-dark z-[-1]"></div>
+    <!-- BEGIN: MainHeader -->
+    <header
+        class="w-full px-6 py-4 flex items-center justify-between border-b border-brand-border bg-brand-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="flex items-center gap-2">
+            <!-- Logo Placeholder -->
+            <svg class="text-brand-yellow" fill="none" height="24" viewbox="0 0 24 24" width="24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round" stroke-width="2"></path>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"></path>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2"></path>
+            </svg>
+            <span class="text-xl font-bold text-white tracking-tight">Open Learn Grid</span>
+        </div>
+        <nav class="flex items-center gap-6">
+            <a class="text-sm font-medium hover:text-white transition-colors" href="#">Browse</a>
+            <button aria-label="Toggle Theme" class="text-brand-muted hover:text-white transition-colors">
+                <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+                    stroke-width="2" viewbox="0 0 24 24" width="20">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <path
+                        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
+                    </path>
+                </svg>
+            </button>
+            <a class="text-sm font-medium hover:text-white transition-colors" href="#">Sign In</a>
+            <a class="bg-brand-yellow text-black px-4 py-2 rounded-md text-sm font-semibold hover:bg-yellow-400 transition-colors"
+                href="#">Register</a>
+        </nav>
+    </header>
+    <!-- END: MainHeader -->
+    <main class="flex-grow flex flex-col items-center w-full max-w-7xl mx-auto px-6 pt-16 pb-24">
+        <!-- BEGIN: HeroSection -->
+        <section class="text-center w-full max-w-3xl mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">Open Learn Grid</h1>
+            <p class="text-lg text-brand-text mb-8">
+                Your decentralized hub for college study materials. Discover, share, and<br />
+                collaborate on notes, question papers, and resources.
+            </p>
+            <div class="flex items-center justify-center gap-4">
+                <button
+                    class="bg-brand-yellow text-black px-6 py-3 rounded-md font-semibold hover:bg-yellow-400 transition-colors">Join
+                    the Grid</button>
+                <button
+                    class="bg-transparent border border-brand-border text-white px-6 py-3 rounded-md font-semibold hover:bg-brand-card transition-colors">Sign
+                    In</button>
+            </div>
+        </section>
+        <!-- END: HeroSection -->
+        <!-- BEGIN: SearchBar -->
+        <div class="w-full max-w-4xl relative mb-16">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="text-brand-muted" fill="none" height="20" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="20">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="M21 21l-4.35-4.35"></path>
+                </svg>
+            </div>
+            <input
+                class="w-full pl-12 pr-4 py-4 bg-brand-card border border-brand-border rounded-lg text-white placeholder-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all shadow-lg"
+                placeholder="Search for materials, subjects, or keywords..." type="text" />
+        </div>
+        <!-- END: SearchBar -->
+        <div class="w-full flex flex-col md:flex-row gap-8">
+            <!-- BEGIN: FiltersSidebar -->
+            <aside class="w-full md:w-64 flex-shrink-0">
+                <h2 class="text-xl font-bold text-white mb-6 border-b border-brand-border pb-2">Filters</h2>
+                <div class="mb-6">
+                    <h3 class="text-xs font-semibold text-brand-muted uppercase tracking-wider mb-3">Type</h3>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                class="form-checkbox h-5 w-5 rounded border-brand-border bg-brand-dark text-brand-blue focus:ring-brand-blue focus:ring-offset-brand-dark transition-colors cursor-pointer group-hover:border-brand-blue"
+                                type="checkbox" />
+                            <span class="text-sm group-hover:text-white transition-colors">Notes</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                class="form-checkbox h-5 w-5 rounded border-brand-border bg-brand-dark text-brand-blue focus:ring-brand-blue focus:ring-offset-brand-dark transition-colors cursor-pointer group-hover:border-brand-blue"
+                                type="checkbox" />
+                            <span class="text-sm group-hover:text-white transition-colors">Question Paper</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                class="form-checkbox h-5 w-5 rounded border-brand-border bg-brand-dark text-brand-blue focus:ring-brand-blue focus:ring-offset-brand-dark transition-colors cursor-pointer group-hover:border-brand-blue"
+                                type="checkbox" />
+                            <span class="text-sm group-hover:text-white transition-colors">Assignment</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                class="form-checkbox h-5 w-5 rounded border-brand-border bg-brand-dark text-brand-blue focus:ring-brand-blue focus:ring-offset-brand-dark transition-colors cursor-pointer group-hover:border-brand-blue"
+                                type="checkbox" />
+                            <span class="text-sm group-hover:text-white transition-colors">Reference</span>
+                        </label>
+                    </div>
+                </div>
+            </aside>
+            <!-- END: FiltersSidebar -->
+            <!-- BEGIN: MaterialsGrid -->
+            <div class="flex-grow grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Card 1 -->
+                <article
+                    class="bg-brand-card border border-brand-border rounded-xl p-5 hover:border-brand-blue transition-colors flex flex-col group cursor-pointer">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3
+                                class="font-semibold text-white group-hover:text-brand-blue transition-colors line-clamp-2 mb-1">
+                                Intro to Algorithms Notes</h3>
+                            <p class="text-xs text-brand-muted">Computer Science</p>
+                        </div>
+                        <!-- PDF Icon -->
+                        <svg class="text-brand-yellow flex-shrink-0" fill="none" height="24" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"
+                            width="24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" x2="8" y1="13" y2="13"></line>
+                            <line x1="16" x2="8" y1="17" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                            <text fill="currentColor" font-size="6" font-weight="bold" stroke="none" x="8"
+                                y="22">PDF</text>
+                        </svg>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-brand-border flex items-center gap-2">
+                        <img alt="Alex K." class="w-6 h-6 rounded-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8wTUqzcm3pIQBEWOeDIreue9ui4Nx-GqpSWKNqPBbc5zQhNQ3oKUftv8E3Zv5OWttoAnAw7YhkDaxc-xoZpS3Sd7nr3wrHa104YHgRiZkCnnHE4wi60wleAzYyKRJzx7FdubA9Q4TTsMKUQj32f6k3WrTy6E52DSAl3uQg-umjklPzyXCdnx_WXP3Bkp32yPHNwsdiZ0wAHmM1Nx0NNRguX96AAqBlRlqkl5LfwuWllItCQ_OtW7RUFt4ZSFh4K3TKFVEKb4uTY0" />
+                        <span class="text-xs font-medium text-brand-text">By Alex K.</span>
+                    </div>
+                </article>
+                <!-- Card 2 -->
+                <article
+                    class="bg-brand-card border border-brand-border rounded-xl p-5 hover:border-brand-blue transition-colors flex flex-col group cursor-pointer">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3
+                                class="font-semibold text-white group-hover:text-brand-blue transition-colors line-clamp-2 mb-1">
+                                Physics Question Paper 2023</h3>
+                            <p class="text-xs text-brand-muted">Physics</p>
+                        </div>
+                        <!-- PDF Icon -->
+                        <svg class="text-brand-yellow flex-shrink-0" fill="none" height="24" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"
+                            width="24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" x2="8" y1="13" y2="13"></line>
+                            <line x1="16" x2="8" y1="17" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                            <text fill="currentColor" font-size="6" font-weight="bold" stroke="none" x="8"
+                                y="22">PDF</text>
+                        </svg>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-brand-border flex items-center gap-2">
+                        <img alt="Sarah L." class="w-6 h-6 rounded-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCATO3FzP25bicKv7N031MT51LAMvYdCYlnHaRvGTBmBuiCGCEwhhY8TmS3jTNnrO6qUa0EdamcGek0KUt2XNImL58AAk0ux_NqThFNBZXnFAS4vS-BXxXFcFDVg3GL2l3zYaDBrBbotzB6nnIIaxcr5-QaDRi49L3SPoKz90QkqHXK0uTzU50wBR7Ugafmr-95Kk563j4ynYVvdymzeJVqn3w869ij5NcDBpkNndwa-mm-iWWeLFLFLwUcRmxpZwTpx1fmJwxAe5g" />
+                        <span class="text-xs font-medium text-brand-text">By Sarah L.</span>
+                    </div>
+                </article>
+                <!-- Card 3 -->
+                <article
+                    class="bg-brand-card border border-brand-border rounded-xl p-5 hover:border-brand-blue transition-colors flex flex-col group cursor-pointer">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3
+                                class="font-semibold text-white group-hover:text-brand-blue transition-colors line-clamp-2 mb-1">
+                                Marketing Assignment 1</h3>
+                            <p class="text-xs text-brand-muted">Business</p>
+                        </div>
+                        <!-- DOCX Icon -->
+                        <svg class="text-brand-blue flex-shrink-0" fill="none" height="24" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"
+                            width="24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" x2="8" y1="13" y2="13"></line>
+                            <line x1="16" x2="8" y1="17" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                            <text fill="currentColor" font-size="5" font-weight="bold" stroke="none" x="6"
+                                y="22">DOCX</text>
+                        </svg>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-brand-border flex items-center gap-2">
+                        <img alt="Mike R." class="w-6 h-6 rounded-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUxeeopUkgkTKE7dpf83LHlNcPvSckOgITnjzLjYGMh6E5ZprTXqq4efwS-t9niJ8etCk8QIXnrxmVNK8HY5E3x4TjM1DUL2Yiapz41TD_LIS2Z5HFoU70LeYgn3EvCJA8JWxHsotBwLtIv9px-vB78E9cxf0jjC62dMP42JxgUYelgwyFYVZYyry6DpQXQPweXK4c9cqvhC6LPp_jKbCPksHYBo1HPdSy25ib7RQzUdaxEk87uwmqh8vLLOwbPmLEtLAbE4RhTAY" />
+                        <span class="text-xs font-medium text-brand-text">By Mike R.</span>
+                    </div>
+                </article>
+                <!-- Card 4 -->
+                <article
+                    class="bg-brand-card border border-brand-border rounded-xl p-5 hover:border-brand-blue transition-colors flex flex-col group cursor-pointer">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3
+                                class="font-semibold text-white group-hover:text-brand-blue transition-colors line-clamp-2 mb-1">
+                                Organic Chemistry Reference</h3>
+                            <p class="text-xs text-brand-muted">Chemistry</p>
+                        </div>
+                        <!-- PDF Icon -->
+                        <svg class="text-brand-yellow flex-shrink-0" fill="none" height="24" stroke="currentColor"
+                            stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"
+                            width="24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" x2="8" y1="13" y2="13"></line>
+                            <line x1="16" x2="8" y1="17" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                            <text fill="currentColor" font-size="6" font-weight="bold" stroke="none" x="8"
+                                y="22">PDF</text>
+                        </svg>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-brand-border flex items-center gap-2">
+                        <img alt="Emily T." class="w-6 h-6 rounded-full object-cover"
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgJlpH0o43MwV5rJYOTFoajI-hnHOlIk8u8w33QNrkTsR_D_hMEn0ypJH8NkAPjueZ3Iu6WqNXkHTRaMyI4AlyKMEO3gATDaKjIU9yF-ZhbiITXTiIMDXe6k5VFSQIlI9vtmJ6keKE206C1U0cJKLm_x9ddlv8S-t95FG0nAzqSvUGXWbYAnQHKFSLyCDDGsbg0ZBLUgoK1iqVfqiO4O6ivQCbklYK1XVJ3knoHYg3L8354gYvPQAIZnA3W6Gqik4-pecPg0PUm0o" />
+                        <span class="text-xs font-medium text-brand-text">By Emily T.</span>
+                    </div>
+                </article>
+            </div>
+            <!-- END: MaterialsGrid -->
+        </div>
+    </main>
+</body>
+
+</html>
