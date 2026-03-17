@@ -22,9 +22,8 @@ export const Home = () => {
         .select(`
           id, title, description, type, file_type, 
           download_count, upvotes, created_at,
-          profiles(full_name, username)
+          profiles:profiles!uploaded_by(full_name, username)
         `)
-        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (searchQuery) {
@@ -32,10 +31,15 @@ export const Home = () => {
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      console.log('Fetched materials raw data:', data);
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
       setMaterials(data || []);
     } catch (error) {
-      console.error('Error fetching materials:', error.message);
+      console.error('Error fetching materials catch:', error);
+      toast.error('Error loading materials: ' + error.message);
     } finally {
       setLoading(false);
     }

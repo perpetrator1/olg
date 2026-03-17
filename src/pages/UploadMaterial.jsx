@@ -14,7 +14,7 @@ export const UploadMaterial = () => {
     title: '',
     description: '',
     type: 'notes',
-    subject_id: '' // Simplified for demo
+    subject_id: null
   });
   
   const [file, setFile] = useState(null);

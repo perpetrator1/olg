@@ -29,7 +29,7 @@ export const MaterialDetail = () => {
         .from('materials')
         .select(`
           *,
-          profiles(full_name, username)
+          profiles:profiles!uploaded_by(full_name, username)
         `)
         .eq('id', id)
         .single();
@@ -148,7 +148,7 @@ export const MaterialDetail = () => {
             <div className="space-y-4 border-t border-slate-700/50 pt-4 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Uploaded by</span>
-                <span className="font-medium text-slate-300">{material.profiles?.full_name || material.profiles?.username}</span>
+                <span className="font-medium text-slate-300">{material.profiles?.full_name || material.profiles?.username || 'Unknown'}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-500">Date</span>

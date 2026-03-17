@@ -34,7 +34,7 @@ export const StudentDashboard = () => {
           { count: requestsCount },
           { count: uploadsCount }
         ] = await Promise.all([
-          supabase.from('requests').select('*', { count: 'exact', head: true }).eq('requested_by', user.id),
+          supabase.from('requests').select('*', { count: 'exact', head: true }).eq('requested_by', user.id).eq('status', 'pending'),
           supabase.from('materials').select('*', { count: 'exact', head: true }).eq('uploaded_by', user.id)
         ]);
 

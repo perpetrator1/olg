@@ -137,18 +137,21 @@ const RequestsTab = () => {
       console.log('Action details:', { id, status, type, payload, requested_by });
       
       // 1. Update the request status
-      const { error: reqError } = await supabase
+      const { data: reqUpdated, error: reqError } = await supabase
         .from('requests')
         .update({ 
           status, 
           reviewed_by: currentUser.id,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select('*');
         
       if (reqError) throw new Error(`Request update failed: ${reqError.message}`);
+      const reqCount = reqUpdated?.length || 0;
       
       let actionTaken = false;
+      let matCount = 0;
 
       // 2. Perform actions if approved
       if (status === 'approved') {
@@ -176,25 +179,33 @@ const RequestsTab = () => {
           console.log(`Action: Upgraded ${requested_by} to ${roleName}`);
           
         } else if (type === 'note_approval' || type === 'material_approval') {
-          const materialId = payload?.material_id || payload?.id;
+          let parsedPayload = payload;
+          if (typeof payload === 'string') {
+            try { parsedPayload = JSON.parse(payload); } catch (e) {}
+          }
+          const materialId = parsedPayload?.material_id || parsedPayload?.id;
           if (!materialId) throw new Error("No material ID found in payload");
           
-          const { error: matError } = await supabase
+          const { data: updatedObj, error: matError } = await supabase
             .from('materials')
             .update({ status: 'approved' })
-            .eq('id', materialId);
+            .eq('id', materialId)
+            .select('*');
             
           if (matError) throw new Error(`Failed to approve material: ${matError.message}`);
+          matCount = updatedObj?.length || 0;
+          if (matCount === 0) console.warn(`Material ${materialId} not found or RLS prevented update.`);
+          
           actionTaken = true;
-          console.log(`Action: Approved material ${materialId}`);
+          console.log(`Action: Approved material ${materialId}, rows affected: ${matCount}`);
         }
       }
 
       toast.success(
         status === 'approved' && !actionTaken && type !== 'general'
           ? `Request marked as approved, but no automated action was defined for type "${type}".`
-          : `Request ${status} successfully!`,
-        { id: toastId, duration: 5000 }
+          : `Success! Request rows: ${reqCount}, Material rows: ${matCount}`,
+        { id: toastId, duration: 8000 }
       );
       
       fetchRequests();
@@ -206,7 +217,10 @@ const RequestsTab = () => {
   };
 
   const getRequestDetails = (r) => {
-    const payload = r.payload || r.details || {};
+    let payload = r.payload || r.details || {};
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch (e) {}
+    }
     if (r.type === 'note_approval' || r.type === 'material_approval') {
       const matId = payload.material_id || payload.id || r.target_id;
       return (
