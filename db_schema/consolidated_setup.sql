@@ -138,7 +138,7 @@ FOR SELECT USING (
   OR EXISTS (
     SELECT 1 FROM profiles 
     JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name = 'admin'
+    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher', 'verifier')
   )
 );
 
@@ -152,15 +152,42 @@ FOR ALL USING (
   )
 );
 
--- Requests
-DROP POLICY IF EXISTS "Admins can update all requests" ON requests;
-CREATE POLICY "Admins can update all requests" ON requests
+DROP POLICY IF EXISTS "Management can update materials" ON materials;
+CREATE POLICY "Management can update materials" ON materials
 FOR UPDATE USING (
   EXISTS (
     SELECT 1 FROM profiles 
     JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name = 'admin'
+    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher', 'verifier')
   )
+);
+
+-- Requests
+DROP POLICY IF EXISTS "Requests are viewable by management" ON requests;
+CREATE POLICY "Requests are viewable by management" ON requests
+FOR SELECT USING (
+  auth.uid() = requested_by
+  OR EXISTS (
+    SELECT 1 FROM profiles 
+    JOIN roles ON profiles.role_id = roles.id 
+    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher')
+  )
+);
+
+DROP POLICY IF EXISTS "Management can update requests" ON requests;
+CREATE POLICY "Management can update requests" ON requests
+FOR UPDATE USING (
+  EXISTS (
+    SELECT 1 FROM profiles 
+    JOIN roles ON profiles.role_id = roles.id 
+    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher')
+  )
+);
+
+DROP POLICY IF EXISTS "Anyone can create requests" ON requests;
+CREATE POLICY "Anyone can create requests" ON requests
+FOR INSERT WITH CHECK (
+  auth.uid() = requested_by
 );
 
 -- Profiles
@@ -173,6 +200,7 @@ FOR UPDATE USING (
     WHERE profiles.id = auth.uid() AND roles.name = 'admin'
   )
 );
+
 
 -- 5. PERFORMANCE INDEXES
 -- ============================================================

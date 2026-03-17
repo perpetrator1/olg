@@ -24,7 +24,9 @@ export const Home = () => {
           download_count, upvotes, created_at,
           profiles:profiles!uploaded_by(full_name, username)
         `)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false });
+
 
       if (searchQuery) {
         query = query.textSearch('title', searchQuery, { type: 'websearch' }); // Simplified search

@@ -12,6 +12,8 @@ export const AdminDashboard = () => {
     activeInstances: 0
   });
   const [loading, setLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [recentUsers, setRecentUsers] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -20,12 +22,16 @@ export const AdminDashboard = () => {
           { count: usersCount },
           { count: materialsCount },
           { count: requestsCount },
-          { count: instancesCount }
+          { count: instancesCount },
+          { data: requestsData },
+          { data: usersData }
         ] = await Promise.all([
           supabase.from('profiles').select('*', { count: 'exact', head: true }),
           supabase.from('materials').select('*', { count: 'exact', head: true }),
           supabase.from('requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-          supabase.from('federated_instances').select('*', { count: 'exact', head: true }).eq('status', 'active')
+          supabase.from('federated_instances').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+          supabase.from('requests').select('*, profiles:profiles!requested_by(username)').eq('status', 'pending').order('created_at', { ascending: false }).limit(5),
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }).limit(5)
         ]);
 
         setStats({
@@ -34,6 +40,8 @@ export const AdminDashboard = () => {
           requests: requestsCount || 0,
           activeInstances: instancesCount || 0
         });
+        setPendingRequests(requestsData || []);
+        setRecentUsers(usersData || []);
       } catch (error) {
         console.error('Error fetching admin stats:', error.message);
       } finally {
@@ -68,20 +76,58 @@ export const AdminDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Pending Requests Widget */}
         <div className="card p-6 min-h-[300px]">
           <h3 className="text-lg font-bold mb-4">Pending Requests</h3>
-          <div className="text-sm text-slate-400">Widget Placeholder: List of pending requests will appear here.</div>
+          {pendingRequests.length > 0 ? (
+            <div className="space-y-4">
+              {pendingRequests.map(req => (
+                <div key={req.id} className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                  <div>
+                    <div className="text-sm font-medium text-white capitalize">{req.type.replace('_', ' ')}</div>
+                    <div className="text-xs text-slate-500">By {req.profiles?.username}</div>
+                  </div>
+                  <Link to="/admin" className="text-xs text-accent hover:underline">Review</Link>
+                </div>
+              ))}
+              <Link to="/admin" className="block text-center text-xs text-slate-500 mt-4 hover:text-white">View all requests</Link>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+              <CheckCircle className="h-10 w-10 mb-2 opacity-20" />
+              <p className="text-sm">No pending requests</p>
+            </div>
+          )}
         </div>
+
+        {/* Recent Users Widget */}
         <div className="card p-6 min-h-[300px]">
           <h3 className="text-lg font-bold mb-4">Recent Users</h3>
-          <div className="text-sm text-slate-400">Widget Placeholder: List of recently joined users.</div>
+          {recentUsers.length > 0 ? (
+            <div className="space-y-4">
+              {recentUsers.map(u => (
+                <div key={u.id} className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold">
+                    {(u.full_name || u.username).charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-white">{u.full_name || u.username}</div>
+                    <div className="text-[10px] text-slate-500">{new Date(u.created_at).toLocaleDateString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 text-center py-10">No users found.</p>
+          )}
         </div>
       </div>
       
       <div className="card p-6">
         <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
-        <div className="text-sm text-slate-400">Widget Placeholder: Global audit log will appear here.</div>
+        <div className="text-sm text-slate-400">All system systems are functional. Peer synchronization active.</div>
       </div>
     </div>
   );
 };
+

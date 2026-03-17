@@ -75,6 +75,34 @@ export const MaterialDetail = () => {
     }
   };
 
+  const handleReport = async () => {
+    if (!session) return toast.error('Please login to report');
+    
+    const reason = window.prompt("Why are you reporting this material? (e.g., inappropriate content, copyright, wrong subject)");
+    
+    if (!reason) return;
+
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .insert({
+          type: 'material_report',
+          requested_by: user.id,
+          payload: {
+            material_id: id,
+            reason: reason,
+            material_title: material.title
+          }
+        });
+
+      if (error) throw error;
+      toast.success('Report submitted. A moderator will review it.');
+    } catch (error) {
+      console.error('Error reporting material:', error.message);
+      toast.error('Failed to submit report');
+    }
+  };
+
   if (loading) return <div className="text-center py-20 text-slate-400">Loading material details...</div>;
   if (!material) return null;
 
@@ -95,9 +123,9 @@ export const MaterialDetail = () => {
             {isPDF ? (
               <div className="w-full flex flex-col items-center overflow-auto p-4 max-h-[800px]">
                 <Document 
-                  file={material.file_url} 
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  loading={<div className="animate-pulse text-slate-500">Loading PDF...</div>}
+                   file={material.file_url} 
+                   onLoadSuccess={onDocumentLoadSuccess}
+                   loading={<div className="animate-pulse text-slate-500">Loading PDF...</div>}
                 >
                   <Page pageNumber={pageNumber} width={Math.min(window.innerWidth - 64, 800)} />
                 </Document>
@@ -168,11 +196,15 @@ export const MaterialDetail = () => {
                 <button onClick={handleUpvote} className="btn btn-secondary flex-1 flex justify-center gap-2">
                   <ThumbsUp className="h-4 w-4" /> {material.upvotes}
                 </button>
-                {session && role === 'student' && (
-                  <button className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-400/10 flex-1 flex justify-center gap-2">
+                {session && user?.id !== material.uploaded_by && (
+                  <button 
+                    onClick={handleReport}
+                    className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-400/10 flex-1 flex justify-center gap-2"
+                  >
                     <AlertTriangle className="h-4 w-4" /> Report
                   </button>
                 )}
+
               </div>
             </div>
           </div>
@@ -184,7 +216,17 @@ export const MaterialDetail = () => {
                 <button className="btn btn-secondary btn-sm flex-1 flex items-center justify-center gap-2">
                   <Edit className="h-4 w-4" /> Edit
                 </button>
-                <button className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this material?")) {
+                      supabase.from('materials').delete().eq('id', id).then(() => {
+                        toast.success("Material deleted");
+                        navigate('/');
+                      });
+                    }
+                  }}
+                  className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2"
+                >
                   <Trash2 className="h-4 w-4" /> Delete
                 </button>
               </div>

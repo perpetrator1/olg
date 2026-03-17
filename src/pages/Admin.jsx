@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Users, Settings, Activity, Server, FileText, Database, CheckCircle, XCircle, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 // Placeholder Components for Tabs
@@ -198,6 +198,24 @@ const RequestsTab = () => {
           
           actionTaken = true;
           console.log(`Action: Approved material ${materialId}, rows affected: ${matCount}`);
+        } else if (type === 'material_report') {
+          const materialId = payload?.material_id;
+          if (!materialId) throw new Error("No material ID found in report payload");
+
+          if (status === 'approved') {
+            // "Approving" a report means we agree it should be removed/rejected
+            const { error: matError } = await supabase
+              .from('materials')
+              .update({ status: 'rejected' })
+              .eq('id', materialId);
+            if (matError) throw matError;
+            actionTaken = true;
+            console.log(`Action: Rejected material ${materialId} due to report`);
+          } else {
+            // "Rejecting" a report means we dismiss it
+            actionTaken = true;
+            console.log(`Action: Dismissed report for material ${materialId}`);
+          }
         }
       }
 
@@ -214,6 +232,7 @@ const RequestsTab = () => {
       toast.error(e.message, { id: toastId });
       fetchRequests();
     }
+
   };
 
   const getRequestDetails = (r) => {
@@ -221,20 +240,29 @@ const RequestsTab = () => {
     if (typeof payload === 'string') {
       try { payload = JSON.parse(payload); } catch (e) {}
     }
+    const matId = payload.material_id || payload.id || r.target_id;
+
     if (r.type === 'note_approval' || r.type === 'material_approval') {
-      const matId = payload.material_id || payload.id || r.target_id;
       return (
         <div className="flex flex-col gap-1">
-          <span className="text-slate-300">Material ID: {matId || 'Missing'}</span>
-          <span className="text-xs text-slate-500">{materials[matId] || 'Title loading...'}</span>
-          {r.status === 'approved' && matId && (
-            <button 
-              onClick={() => updateRequest(r.id, 'approved', 'note_approval', payload, r.requested_by)}
-              className="text-[10px] text-accent hover:underline text-left w-fit"
-            >
-              (Retry Material Activation)
-            </button>
-          )}
+          <span className="text-slate-300">Material: {materials[matId] || 'Title loading...'}</span>
+          <Link 
+            to={`/materials/${matId}`} 
+            className="text-[10px] text-accent hover:underline flex items-center gap-1"
+          >
+            <Info className="h-2 w-2" /> View & Preview Material
+          </Link>
+        </div>
+      );
+    }
+    if (r.type === 'material_report') {
+      return (
+        <div className="flex flex-col gap-1">
+          <span className="font-bold text-red-400">Reason: {payload.reason}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Material: {payload.material_title || matId}</span>
+            <Link to={`/materials/${matId}`} className="text-[10px] text-accent hover:underline">Preview</Link>
+          </div>
         </div>
       );
     }
@@ -243,6 +271,7 @@ const RequestsTab = () => {
     }
     return JSON.stringify(payload);
   };
+
 
   return (
     <div className="card p-6">
