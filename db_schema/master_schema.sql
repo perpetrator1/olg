@@ -1,10 +1,10 @@
 -- ============================================================
--- SAFE MASTER SETUP & UPDATE
--- This script can be run multiple times without errors.
--- It handles existing tables, policies, and functions.
+-- MASTER SCHEMA AND SETUP (Simplified)
+-- Use this script to set up the entire database from scratch
+-- or to fix/reset all tables and permissions.
 -- ============================================================
 
--- 1. TABLES (Using IF NOT EXISTS)
+-- 1. BASE TABLES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,11 +55,8 @@ CREATE TABLE IF NOT EXISTS materials (
   verified_by uuid REFERENCES profiles(id),
   status text DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
   is_common bool DEFAULT false,
-  common_departments uuid[],
-  common_semesters int[],
   download_count int DEFAULT 0,
   upvotes int DEFAULT 0,
-  version int DEFAULT 1,
   instance_url text DEFAULT 'local',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
@@ -77,14 +74,16 @@ CREATE TABLE IF NOT EXISTS requests (
   updated_at timestamptz DEFAULT now()
 );
 
--- 2. SEED DATA (Using ON CONFLICT)
+-- 2. SEED DATA
 -- ============================================================
 INSERT INTO roles (name) 
 VALUES ('admin'), ('teacher'), ('verifier'), ('student')
 ON CONFLICT (name) DO NOTHING;
 
--- 3. FUNCTIONS & TRIGGERS
+-- 3. CORE FUNCTIONS
 -- ============================================================
+
+-- Handle new user registration and link to profiles
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -111,7 +110,7 @@ BEGIN
   END IF;
 END $$;
 
--- Increment Functions
+-- Statistics Functions
 CREATE OR REPLACE FUNCTION increment_download(row_id UUID)
 RETURNS VOID AS $$
 BEGIN
@@ -126,85 +125,83 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. POLICIES (Drop and Re-create for Clean Slate)
+-- 4. ROW LEVEL SECURITY (Final Master Policies)
 -- ============================================================
 
--- Materials
-DROP POLICY IF EXISTS "Materials are viewable by everyone" ON materials;
-CREATE POLICY "Materials are viewable by everyone" ON materials 
-FOR SELECT USING (
+-- A. ROLES & PROFILES (Must be readable for JOINs in other policies)
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Roles are readable by everyone" ON roles;
+CREATE POLICY "Roles are readable by everyone" ON roles FOR SELECT USING (true);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Profiles are readable by authenticated" ON profiles;
+CREATE POLICY "Profiles are readable by authenticated" ON profiles FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 4.B MATERIALS
+ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
+
+-- Select
+DROP POLICY IF EXISTS "materials_select" ON materials;
+CREATE POLICY "materials_select" ON materials FOR SELECT USING (
   status = 'approved' 
   OR auth.uid() = uploaded_by 
   OR EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher', 'verifier')
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id 
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher', 'verifier')
   )
 );
 
-DROP POLICY IF EXISTS "Admins can manage materials" ON materials;
-CREATE POLICY "Admins can manage materials" ON materials 
-FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name = 'admin'
+-- Insert
+DROP POLICY IF EXISTS "materials_insert" ON materials;
+CREATE POLICY "materials_insert" ON materials FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
+-- Update
+DROP POLICY IF EXISTS "materials_update" ON materials;
+CREATE POLICY "materials_update" ON materials FOR UPDATE USING (
+  auth.uid() = uploaded_by 
+  OR EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id 
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher', 'verifier')
   )
 );
 
-DROP POLICY IF EXISTS "Management can update materials" ON materials;
-CREATE POLICY "Management can update materials" ON materials
-FOR UPDATE USING (
-  EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher', 'verifier')
+-- Delete
+DROP POLICY IF EXISTS "materials_delete" ON materials;
+CREATE POLICY "materials_delete" ON materials FOR DELETE USING (
+  auth.uid() = uploaded_by 
+  OR EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id 
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
   )
 );
 
--- Requests
-DROP POLICY IF EXISTS "Requests are viewable by management" ON requests;
-CREATE POLICY "Requests are viewable by management" ON requests
+-- C. REQUESTS
+ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Requests view policy" ON requests;
+CREATE POLICY "Requests view policy" ON requests
 FOR SELECT USING (
   auth.uid() = requested_by
   OR EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher')
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id 
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
   )
 );
 
-DROP POLICY IF EXISTS "Management can update requests" ON requests;
-CREATE POLICY "Management can update requests" ON requests
+DROP POLICY IF EXISTS "Requests update policy" ON requests;
+CREATE POLICY "Requests update policy" ON requests
 FOR UPDATE USING (
   EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name IN ('admin', 'teacher')
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id 
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
   )
 );
 
-DROP POLICY IF EXISTS "Anyone can create requests" ON requests;
-CREATE POLICY "Anyone can create requests" ON requests
-FOR INSERT WITH CHECK (
-  auth.uid() = requested_by
-);
-
--- Profiles
-DROP POLICY IF EXISTS "Admins can update all profiles" ON profiles;
-CREATE POLICY "Admins can update all profiles" ON profiles
-FOR UPDATE USING (
-  EXISTS (
-    SELECT 1 FROM profiles 
-    JOIN roles ON profiles.role_id = roles.id 
-    WHERE profiles.id = auth.uid() AND roles.name = 'admin'
-  )
-);
-
+DROP POLICY IF EXISTS "Requests insert policy" ON requests;
+CREATE POLICY "Requests insert policy" ON requests FOR INSERT WITH CHECK (auth.uid() = requested_by);
 
 -- 5. PERFORMANCE INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status);
-CREATE INDEX IF NOT EXISTS idx_materials_uploaded_by ON materials(uploaded_by);
 CREATE INDEX IF NOT EXISTS idx_materials_created_at ON materials(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status);

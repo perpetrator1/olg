@@ -108,9 +108,9 @@ const RequestsTab = () => {
       
       setRequests(data || []);
       
-      // Fetch material titles for note_approval requests
+      // Fetch material titles for note_approval and removal_request requests
       const materialIds = data
-        .filter(r => r.type === 'note_approval' && (r.payload?.material_id || r.details?.material_id))
+        .filter(r => (r.type === 'note_approval' || r.type === 'removal_request' || r.type === 'material_report') && (r.payload?.material_id || r.details?.material_id))
         .map(r => r.payload?.material_id || r.details?.material_id);
         
       if (materialIds.length > 0) {
@@ -216,6 +216,23 @@ const RequestsTab = () => {
             actionTaken = true;
             console.log(`Action: Dismissed report for material ${materialId}`);
           }
+        } else if (type === 'removal_request') {
+          const materialId = payload?.material_id;
+          if (!materialId) throw new Error("No material ID found in removal request payload");
+
+          if (status === 'approved') {
+            const { error: deleteError } = await supabase
+              .from('materials')
+              .delete()
+              .eq('id', materialId);
+            
+            if (deleteError) throw deleteError;
+            actionTaken = true;
+            console.log(`Action: Deleted material ${materialId} per removal request`);
+          } else {
+            actionTaken = true;
+            console.log(`Action: Rejected removal request for ${materialId}`);
+          }
         }
       }
 
@@ -255,12 +272,15 @@ const RequestsTab = () => {
         </div>
       );
     }
-    if (r.type === 'material_report') {
+    if (r.type === 'material_report' || r.type === 'removal_request') {
+      const isRemoval = r.type === 'removal_request' || payload.request_type === 'removal';
       return (
         <div className="flex flex-col gap-1">
-          <span className="font-bold text-red-400">Reason: {payload.reason}</span>
+          <span className={`font-bold ${isRemoval ? 'text-red-500' : 'text-orange-400'}`}>
+            {isRemoval ? 'REMOVAL REQUEST' : 'REPORT'}: {payload.reason}
+          </span>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Material: {payload.material_title || matId}</span>
+            <span className="text-xs text-slate-500">Material: {payload.material_title || materials[matId] || matId}</span>
             <Link to={`/materials/${matId}`} className="text-[10px] text-accent hover:underline">Preview</Link>
           </div>
         </div>

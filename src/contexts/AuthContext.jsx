@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       console.log('AuthProvider: Setting role to:', roleName);
-      setRole(roleName);
+      setRole(roleName.toLowerCase());
     } catch (error) {
       console.error('AuthProvider: Catch block fetching profile:', error.message);
       setRole('student');

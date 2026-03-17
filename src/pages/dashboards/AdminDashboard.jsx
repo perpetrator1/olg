@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { StatCard } from '../../components/StatCard';
-import { Users, FileText, Activity, AlertCircle, Settings } from 'lucide-react';
+import { Users, FileText, Activity, AlertCircle, Settings, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const AdminDashboard = () => {
