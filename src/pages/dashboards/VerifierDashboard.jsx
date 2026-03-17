@@ -41,7 +41,7 @@ export const VerifierDashboard = () => {
       </div>
 
       <div className="card p-6 mt-8">
-        <h3 className="text-lg font-bold text-white mb-4">Verification Queue</h3>
+        <h3 className="text-lg font-bold mb-4">Verification Queue</h3>
         <p className="text-sm text-slate-400">List of student-uploaded notes requiring verification.</p>
       </div>
     </div>

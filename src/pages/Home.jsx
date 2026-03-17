@@ -52,15 +52,15 @@ export const Home = () => {
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="h-5 w-5 text-accent" />
-            <h3 className="font-semibold text-white">Filters</h3>
+            <h3 className="font-semibold">Filters</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Type</label>
+              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Type</label>
               <div className="space-y-2">
                 {['Notes', 'Question Paper', 'Assignment', 'Reference'].map(type => (
-                  <label key={type} className="flex items-center gap-2 text-sm text-slate-300">
-                    <input type="checkbox" className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent" />
+                  <label key={type} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent" />
                     {type}
                   </label>
                 ))}
@@ -74,7 +74,7 @@ export const Home = () => {
       <main className="flex-1">
         {!session && (
           <div className="card p-8 mb-8 bg-gradient-to-r from-slate-800 to-slate-900 border-accent/20">
-            <h1 className="text-3xl font-bold text-white mb-2">Open Learn Grid</h1>
+            <h1 className="text-3xl font-bold mb-2">Open Learn Grid</h1>
             <p className="text-slate-300 mb-6 max-w-2xl">A decentralised, federated educational material platform for colleges. Discover notes, past papers, and reference materials shared by your peers.</p>
             <div className="flex gap-4">
               <Link to="/auth/register" className="btn btn-primary">Join the Grid</Link>
@@ -109,7 +109,7 @@ export const Home = () => {
                   <span className="text-xs text-slate-500">{new Date(m.created_at).toLocaleDateString()}</span>
                 </div>
                 
-                <h3 className="text-lg font-bold text-white mb-2 line-clamp-2">{m.title}</h3>
+                <h3 className="text-lg font-bold mb-2 line-clamp-2">{m.title}</h3>
                 <p className="text-sm text-slate-400 line-clamp-3 mb-4 flex-1">{m.description || 'No description provided.'}</p>
                 
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-700/50">
@@ -139,7 +139,7 @@ export const Home = () => {
             <div className="h-16 w-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
               <FileText className="h-8 w-8 text-slate-500" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No materials found</h3>
+            <h3 className="text-xl font-bold mb-2">No materials found</h3>
             <p className="text-slate-400">Try adjusting your filters or search query.</p>
           </div>
         )}

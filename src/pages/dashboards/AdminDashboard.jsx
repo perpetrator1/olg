@@ -49,7 +49,7 @@ export const AdminDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-white">Quick Overview</h3>
+        <h3 className="text-xl font-bold">Quick Overview</h3>
         <div className="flex gap-2">
           <Link to="/upload" className="btn btn-secondary btn-sm flex items-center gap-2">
             Upload Material
@@ -69,17 +69,17 @@ export const AdminDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card p-6 min-h-[300px]">
-          <h3 className="text-lg font-bold text-white mb-4">Pending Requests</h3>
+          <h3 className="text-lg font-bold mb-4">Pending Requests</h3>
           <div className="text-sm text-slate-400">Widget Placeholder: List of pending requests will appear here.</div>
         </div>
         <div className="card p-6 min-h-[300px]">
-          <h3 className="text-lg font-bold text-white mb-4">Recent Users</h3>
+          <h3 className="text-lg font-bold mb-4">Recent Users</h3>
           <div className="text-sm text-slate-400">Widget Placeholder: List of recently joined users.</div>
         </div>
       </div>
       
       <div className="card p-6">
-        <h3 className="text-lg font-bold text-white mb-4">Recent Activity</h3>
+        <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
         <div className="text-sm text-slate-400">Widget Placeholder: Global audit log will appear here.</div>
       </div>
     </div>

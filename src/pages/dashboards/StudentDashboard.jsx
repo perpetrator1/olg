@@ -64,16 +64,16 @@ export const StudentDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card p-6 min-h-[300px]">
-          <h3 className="text-lg font-bold text-white mb-4">Recently Added Materials</h3>
+          <h3 className="text-lg font-bold mb-4">Recently Added Materials</h3>
           <p className="text-sm text-slate-400">Discover new content shared by your peers.</p>
         </div>
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="text-lg font-bold text-white mb-4">My Request Statuses</h3>
+            <h3 className="text-lg font-bold mb-4">My Request Statuses</h3>
             <p className="text-sm text-slate-400">Track approvals for materials and role requests.</p>
           </div>
           <div className="card p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Quick Links</h3>
+            <h3 className="text-lg font-bold mb-4">Quick Links</h3>
             <div className="flex gap-2 flex-wrap">
               <button className="btn btn-secondary btn-sm" onClick={() => navigate('/upload')}>Upload Material</button>
               <button className="btn btn-secondary btn-sm" onClick={() => toast('Course requests coming soon!', { icon: '🚧' })}>Request Course</button>

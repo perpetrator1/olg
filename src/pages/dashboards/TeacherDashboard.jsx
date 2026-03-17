@@ -48,11 +48,11 @@ export const TeacherDashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         <div className="card p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Pending Verifications</h3>
+          <h3 className="text-lg font-bold mb-4">Pending Verifications</h3>
           <p className="text-sm text-slate-400">Queue of notes waiting for verification.</p>
         </div>
         <div className="card p-6">
-          <h3 className="text-lg font-bold text-white mb-4">Promote Students</h3>
+          <h3 className="text-lg font-bold mb-4">Promote Students</h3>
           <p className="text-sm text-slate-400">Invite a trusted student to become a Verifier.</p>
           <button className="btn btn-primary mt-4">Promote a Student</button>
         </div>

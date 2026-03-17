@@ -45,7 +45,7 @@ const UsersTab = () => {
 
   return (
     <div className="card p-6">
-      <h3 className="text-xl font-bold text-white mb-4">User Management</h3>
+      <h3 className="text-xl font-bold mb-4">User Management</h3>
       <p className="text-slate-400">Manage user roles.</p>
       <div className="table-container mt-6">
         <table className="data-table">
@@ -246,7 +246,7 @@ const RequestsTab = () => {
 
   return (
     <div className="card p-6">
-      <h3 className="text-xl font-bold text-white mb-4">Requests Management</h3>
+      <h3 className="text-xl font-bold mb-4">Requests Management</h3>
       <div className="table-container mt-6">
         <table className="data-table">
           <thead>
@@ -309,14 +309,14 @@ const RequestsTab = () => {
 
 const SystemTab = () => (
   <div className="card p-6">
-    <h3 className="text-xl font-bold text-white mb-4">Departments, Courses, Subjects</h3>
+    <h3 className="text-xl font-bold mb-4">Departments, Courses, Subjects</h3>
     <p className="text-slate-400">CRUD operations for academic taxonomy.</p>
   </div>
 );
 
 const AuditLogTab = () => (
   <div className="card p-6">
-    <h3 className="text-xl font-bold text-white mb-4">Audit Log</h3>
+    <h3 className="text-xl font-bold mb-4">Audit Log</h3>
     <p className="text-slate-400 mb-6">Timeline of system actions.</p>
     
     <div className="relative pl-6 border-l-2 border-slate-700 space-y-8">
@@ -325,7 +325,7 @@ const AuditLogTab = () => (
         <div className="absolute -left-[1.95rem] top-1 h-4 w-4 rounded-full bg-accent border-4 border-slate-900"></div>
         <div className="text-xs text-slate-500 mb-1">10 minutes ago</div>
         <div className="flex gap-2 items-center mb-2">
-          <span className="font-medium text-white">Admin User</span>
+          <span className="font-medium text-slate-900 dark:text-white">Admin User</span>
           <span className="badge badge-success">updated_role</span>
         </div>
         <div className="text-sm text-slate-400">Changed role of <span className="text-slate-300">janesmith</span> to Verifier.</div>
@@ -336,7 +336,7 @@ const AuditLogTab = () => (
         <div className="absolute -left-[1.95rem] top-1 h-4 w-4 rounded-full bg-blue-500 border-4 border-slate-900"></div>
         <div className="text-xs text-slate-500 mb-1">2 hours ago</div>
         <div className="flex gap-2 items-center mb-2">
-          <span className="font-medium text-white">System</span>
+          <span className="font-medium text-slate-900 dark:text-white">System</span>
           <span className="badge badge-primary">new_instance</span>
         </div>
         <div className="text-sm text-slate-400">Added peer node <span className="text-slate-300">MIT OpenCourseWare</span>.</div>
@@ -348,7 +348,7 @@ const AuditLogTab = () => (
 const InstanceSettingsTab = () => (
   <div className="space-y-6">
     <div className="card p-6">
-      <h3 className="text-xl font-bold text-white mb-4">Local Instance Settings</h3>
+      <h3 className="text-xl font-bold mb-4">Local Instance Settings</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-1 text-slate-300">Instance Name</label>
@@ -366,7 +366,7 @@ const InstanceSettingsTab = () => (
 
     <div className="card p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-white">Federated Peers (The Grid)</h3>
+        <h3 className="text-xl font-bold">Federated Peers (The Grid)</h3>
         <button className="btn btn-primary btn-sm">Add Peer Node</button>
       </div>
       <p className="text-slate-400 mb-6">Connect to other college instances by adding their Supabase URL and Anon Key.</p>
@@ -411,7 +411,7 @@ export const AdminPanel = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Administration</h1>
+        <h1 className="text-3xl font-bold">Administration</h1>
         <p className="text-slate-400 mt-2">Manage the platform, users, and federation settings.</p>
       </div>
 
@@ -426,7 +426,7 @@ export const AdminPanel = () => {
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id 
                     ? 'bg-accent/10 text-accent' 
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <tab.icon className="h-5 w-5" />
