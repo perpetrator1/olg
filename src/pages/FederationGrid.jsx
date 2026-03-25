@@ -18,62 +18,25 @@ export const FederationGrid = () => {
     setErrorCount(0);
     
     try {
-      // 1. Fetch active instances
-      const { data: instances, error: instanceError } = await supabase
-        .from('federated_instances')
-        .select('*')
-        .eq('status', 'active');
-
-      if (instanceError) throw instanceError;
-
-      if (!instances || instances.length === 0) {
-        setLoading(false);
-        return;
+      // 1. Fetch from Django Backend Aggregator
+      const response = await fetch('http://localhost:8000/api/federation/grid/');
+      if (!response.ok) {
+        throw new Error(`Backend API error: ${response.statusText}`);
       }
-
-      // 2. Fetch from each instance
-      let allMaterials = [];
-      let errors = 0;
-
-      const promises = instances.map(async (instance) => {
-        try {
-          const remoteClient = createClient(instance.supabase_url, instance.anon_key);
-          const { data, error } = await remoteClient
-            .from('materials')
-            .select(`
-              id, title, description, type, file_url, created_at,
-              profiles(full_name, username)
-            `)
-            .eq('status', 'approved')
-            .limit(20);
-
-          if (error) throw error;
-          
-          if (data) {
-            // Tag each material with its source instance
-            const taggedData = data.map(m => ({
-              ...m,
-              instance_id: instance.id,
-              instance_name: instance.name
-            }));
-            allMaterials = [...allMaterials, ...taggedData];
-          }
-        } catch (err) {
-          console.error(`Failed to fetch from peer ${instance.name}:`, err.message);
-          errors++;
-        }
-      });
-
-      await Promise.all(promises);
       
-      // Sort all combined materials by recent
-      allMaterials.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      const data = await response.json();
       
-      setMaterials(allMaterials);
-      setErrorCount(errors);
+      // The Django API returns { total_peers, successful_peers, failed_peers, errors, materials }
+      setMaterials(data.materials || []);
+      setErrorCount(data.failed_peers || 0);
+      
+      if (data.failed_peers > 0) {
+        console.warn('Some peer nodes failed:', data.errors);
+      }
       
     } catch (error) {
-      console.error('Federation Error:', error.message);
+      console.error('Federation API Error:', error.message);
+      setErrorCount(1); // Ensure error UI shows up
     } finally {
       setLoading(false);
     }

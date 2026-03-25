@@ -93,7 +93,7 @@
 
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none px-4 py-2;
   }
   .btn-primary {
     @apply bg-amber-500 text-white hover:bg-amber-600;
