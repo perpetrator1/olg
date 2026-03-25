@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { StatCard } from '../../components/StatCard';
-import { FileCheck, UploadCloud, Users, Check, X, ExternalLink, AlertTriangle, Trash2 } from 'lucide-react';
+import { FileCheck, UploadCloud, Users, Check, X, ExternalLink, AlertTriangle, Trash2, Search, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const TeacherDashboard = () => {
@@ -11,6 +11,13 @@ export const TeacherDashboard = () => {
   const [pendingMaterials, setPendingMaterials] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Promote modal state
+  const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [promoting, setPromoting] = useState(null); // id of student being promoted
 
   useEffect(() => {
     fetchData();
@@ -73,31 +80,118 @@ export const TeacherDashboard = () => {
   };
 
   const handleReportAction = async (requestId, action, materialId) => {
+    const actionToast = toast.loading(action === 'remove' ? "Removing material..." : "Dismissing report...");
     try {
+      const timestamp = new Date().toISOString();
       if (action === 'remove') {
-        const timestamp = new Date().toISOString();
-        // 1. Reject the material
-        await supabase.from('materials').update({ status: 'rejected', updated_at: timestamp }).eq('id', materialId);
+        // 1. Delete the material
+        const { error: deleteError } = await supabase
+          .from('materials')
+          .delete()
+          .eq('id', materialId);
+        
+        if (deleteError) throw deleteError;
+
         // 2. Approve the report request (concluding it was valid)
-        await supabase.from('requests').update({ status: 'approved', reviewed_by: user.id, updated_at: timestamp }).eq('id', requestId);
-        // 3. Reject any pending "note_approval" requests for this material
-        await supabase.from('requests').update({ status: 'rejected', reviewed_by: user.id, updated_at: timestamp })
-          .containedBy('payload', { material_id: materialId })
-          .eq('type', 'note_approval')
-          .eq('status', 'pending');
+        await supabase.from('requests').update({ 
+          status: 'approved', 
+          reviewed_by: user.id, 
+          updated_at: timestamp 
+        }).eq('id', requestId);
+
+        // 3. Reject ANY other pending requests for this material (approvals, other reports, etc)
+        // We use a more generic approach: any pending request with this material_id in payload
+        await supabase.from('requests').update({ 
+          status: 'rejected', 
+          reviewed_by: user.id, 
+          review_note: 'Material removed by moderator',
+          updated_at: timestamp 
+        })
+        .containedBy('payload', { material_id: materialId })
+        .eq('status', 'pending');
           
-        toast.success("Material removed and report resolved");
+        toast.success("Material permanently removed", { id: actionToast });
       } else {
         // Just dismiss the report
-        await supabase.from('requests').update({ status: 'rejected', reviewed_by: user.id }).eq('id', requestId);
-        toast.success("Report dismissed");
+        await supabase.from('requests').update({ 
+          status: 'rejected', 
+          reviewed_by: user.id,
+          updated_at: timestamp
+        }).eq('id', requestId);
+        toast.success("Report dismissed", { id: actionToast });
       }
       fetchData();
     } catch (error) {
-      toast.error("Failed to process report: " + error.message);
+      console.error("Report Action Error:", error);
+      toast.error("Failed to process action: " + error.message, { id: actionToast });
     }
   };
 
+  const searchStudents = useCallback(async (q) => {
+    if (!q.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, username, email, roles!role_id(name)')
+        .or(`username.ilike.%${q}%,email.ilike.%${q}%,full_name.ilike.%${q}%`)
+        .limit(10);
+      if (error) throw error;
+      // Only show students
+      setSearchResults((data || []).filter(p => p.roles?.name === 'student'));
+    } catch (e) {
+      toast.error('Search failed: ' + e.message);
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    // debounce: search 400ms after typing stops
+    clearTimeout(window._promoteSearchTimer);
+    window._promoteSearchTimer = setTimeout(() => searchStudents(val), 400);
+  };
+
+  const handlePromote = async (student) => {
+    setPromoting(student.id);
+    try {
+      // 1. Get verifier role id
+      const { data: roleData, error: roleErr } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'verifier')
+        .single();
+      if (roleErr) throw roleErr;
+
+      // 2. Update the student's role
+      const { error: updateErr } = await supabase
+        .from('profiles')
+        .update({ role_id: roleData.id })
+        .eq('id', student.id);
+      if (updateErr) throw updateErr;
+
+      // 3. Log the promotion as a request for audit trail
+      await supabase.from('requests').insert({
+        type: 'role_upgrade',
+        requested_by: student.id,
+        reviewed_by: user.id,
+        status: 'approved',
+        payload: { student_id: student.id, promoted_to: 'verifier', promoted_by: user.id },
+      });
+
+      toast.success(`${student.full_name || student.username} promoted to Verifier!`);
+      setShowPromoteModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      fetchData();
+    } catch (e) {
+      toast.error('Promotion failed: ' + e.message);
+    } finally {
+      setPromoting(null);
+    }
+  };
 
   if (loading) return <div className="text-center py-10 text-slate-400">Loading teacher dashboard...</div>;
 
@@ -176,8 +270,70 @@ export const TeacherDashboard = () => {
       <div className="card p-6">
         <h3 className="text-lg font-bold mb-4">Promote Students</h3>
         <p className="text-sm text-slate-400">Invite a trusted student to become a Verifier.</p>
-        <button className="btn btn-primary mt-4">Promote a Student</button>
+        <button className="btn btn-primary mt-4" onClick={() => setShowPromoteModal(true)}>
+          <UserCheck className="h-4 w-4 mr-2 inline" />
+          Promote a Student
+        </button>
       </div>
+
+      {/* Promote Modal */}
+      {showPromoteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={(e) => { if (e.target === e.currentTarget) { setShowPromoteModal(false); setSearchQuery(''); setSearchResults([]); } }}
+        >
+          <div className="card w-full max-w-md mx-4 p-6 space-y-4" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Promote a Student</h2>
+              <button
+                onClick={() => { setShowPromoteModal(false); setSearchQuery(''); setSearchResults([]); }}
+                className="p-1.5 hover:bg-slate-700 rounded text-slate-400"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-400">Search by name, username, or email to find a student and promote them to Verifier.</p>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                className="input w-full pl-9"
+                placeholder="Search students..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                autoFocus
+              />
+            </div>
+
+            {searching && <p className="text-sm text-slate-400 text-center py-2">Searching...</p>}
+
+            {!searching && searchQuery && searchResults.length === 0 && (
+              <p className="text-sm text-slate-500 text-center py-4">No students found.</p>
+            )}
+
+            {searchResults.length > 0 && (
+              <div className="space-y-2">
+                {searchResults.map(s => (
+                  <div key={s.id} className="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium text-white">{s.full_name || s.username}</div>
+                      <div className="text-xs text-slate-400">@{s.username} · {s.email}</div>
+                    </div>
+                    <button
+                      onClick={() => handlePromote(s)}
+                      disabled={promoting === s.id}
+                      className="btn btn-primary btn-xs py-1 px-3"
+                    >
+                      {promoting === s.id ? 'Promoting...' : 'Promote'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

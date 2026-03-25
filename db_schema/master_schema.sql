@@ -137,6 +137,16 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Profiles are readable by authenticated" ON profiles;
 CREATE POLICY "Profiles are readable by authenticated" ON profiles FOR SELECT USING (auth.role() = 'authenticated');
 
+-- Allow users to update their own profile; admins/teachers can update any profile (e.g. to promote roles)
+DROP POLICY IF EXISTS "Profiles update policy" ON profiles;
+CREATE POLICY "Profiles update policy" ON profiles FOR UPDATE USING (
+  auth.uid() = id
+  OR EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
+  )
+);
+
 -- 4.B MATERIALS
 ALTER TABLE materials ENABLE ROW LEVEL SECURITY;
 

@@ -1,18 +1,119 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, BookOpen, Grid, User, LogIn, Bell, CheckCircle2, Clock, X } from 'lucide-react';
+import { LogOut, BookOpen, Grid, User, LogIn, Bell, CheckCircle2, Clock, X, AlertTriangle } from 'lucide-react';
 import { DarkModeToggle } from '../components/DarkModeToggle';
-import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export const MainLayout = () => {
   const { session, user, signOut } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [lastRead, setLastRead] = useState(0);
 
-  const notifications = [
-    { id: 1, title: 'Welcome to Open Learn Grid', message: 'Explore shared educational materials.', icon: CheckCircle2, time: 'Now', color: 'text-green-500' },
-    { id: 2, title: 'Pending Approval', message: 'Your uploaded material is being reviewed.', icon: Clock, time: '2h ago', color: 'text-amber-500' },
-  ];
+  useEffect(() => {
+    if (user) setLastRead(Number(localStorage.getItem('lastRead_' + user.id)) || 0);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*')
+        .eq('requested_by', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      
+      if (!error && data) {
+        setNotifications(data.map(formatNotification));
+      }
+    };
+
+    fetchNotifications();
+
+    const subscription = supabase
+      .channel('public:requests')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `requested_by=eq.${user.id}` }, payload => {
+        fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [user]);
+
+  const formatNotification = (req) => {
+    let title = 'Notification';
+    let message = '';
+    let icon = Bell;
+    let color = 'text-slate-500';
+
+    if (req.type === 'role_upgrade') {
+      title = 'Role Upgraded';
+      message = `You have been promoted to ${req.payload?.promoted_to || 'a new role'}.`;
+      icon = CheckCircle2;
+      color = 'text-green-500';
+    } else if (req.type === 'note_approval') {
+      if (req.status === 'pending') {
+        title = 'Pending Approval';
+        message = 'Your uploaded material is being reviewed.';
+        icon = Clock;
+        color = 'text-amber-500';
+      } else if (req.status === 'approved') {
+        title = 'Material Approved';
+        message = 'Your uploaded material has been approved and published.';
+        icon = CheckCircle2;
+        color = 'text-green-500';
+      } else if (req.status === 'rejected') {
+        title = 'Material Rejected';
+        message = req.review_note ? `Material rejected: ${req.review_note}` : 'Your uploaded material was rejected.';
+        icon = AlertTriangle;
+        color = 'text-red-500';
+      }
+    } else if (req.type === 'material_report') {
+       if (req.status === 'approved') {
+          title = 'Report Resolved';
+          message = 'A material you reported has been removed.';
+          icon = CheckCircle2;
+          color = 'text-green-500';
+       } else if (req.status === 'rejected') {
+          title = 'Report Dismissed';
+          message = 'A report you submitted was reviewed and dismissed.';
+          icon = AlertTriangle;
+          color = 'text-slate-500';
+       } else {
+          title = 'Report Received';
+          message = 'Your report is being reviewed by moderators.';
+          icon = Clock;
+          color = 'text-amber-500';
+       }
+    }
+
+    const date = new Date(req.updated_at || req.created_at);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    let timeStr = 'Just now';
+    if (diffDays > 0) timeStr = `${diffDays}d ago`;
+    else if (diffHours > 0) timeStr = `${diffHours}h ago`;
+    else if (diffMins > 0) timeStr = `${diffMins}m ago`;
+
+    return {
+      id: req.id,
+      title,
+      message,
+      icon,
+      time: timeStr,
+      color,
+      rawDate: date.toISOString()
+    };
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -42,7 +143,9 @@ export const MainLayout = () => {
                       className={`relative rounded-full p-2 transition-colors ${showNotifications ? 'bg-slate-100 dark:bg-slate-800 text-accent' : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400'}`}
                     >
                       <Bell className="h-5 w-5" />
-                      <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent border-2 border-white dark:border-slate-900"></span>
+                      {notifications.filter(n => new Date(n.rawDate).getTime() > lastRead).length > 0 && (
+                        <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent border-2 border-white dark:border-slate-900"></span>
+                      )}
                     </button>
 
                     {showNotifications && (
@@ -54,19 +157,38 @@ export const MainLayout = () => {
                           </button>
                         </div>
                         <div className="max-h-[300px] overflow-y-auto">
-                          {notifications.map((n) => (
-                            <div key={n.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-3 border-b border-slate-50 dark:border-slate-700 last:border-0">
-                              <n.icon className={`h-5 w-5 shrink-0 mt-0.5 ${n.color}`} />
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{n.title}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{n.message}</p>
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{n.time}</p>
-                              </div>
+                          {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+                              <Bell className="h-8 w-8 mx-auto mb-3 opacity-20" />
+                              <p className="text-sm">No new notifications</p>
                             </div>
-                          ))}
+                          ) : (
+                            notifications.map((n) => {
+                              const isUnread = new Date(n.rawDate).getTime() > lastRead;
+                              return (
+                                <div key={n.id} className={`p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex gap-3 border-b border-slate-50 dark:border-slate-700 last:border-0 ${isUnread ? 'bg-slate-50 dark:bg-slate-800/80' : ''}`}>
+                                  <n.icon className={`h-5 w-5 shrink-0 mt-0.5 ${n.color}`} />
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{n.title}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{n.message}</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{n.time}</p>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
                         </div>
                         <div className="p-2 bg-slate-50/50 dark:bg-slate-900/50 text-center">
-                          <button className="text-xs font-medium text-accent hover:underline">Mark all as read</button>
+                          <button 
+                            onClick={() => {
+                              const now = Date.now();
+                              setLastRead(now);
+                              if (user) localStorage.setItem('lastRead_' + user.id, now);
+                            }} 
+                            className="text-xs font-medium text-accent hover:underline"
+                          >
+                            Mark all as read
+                          </button>
                         </div>
                       </div>
                     )}

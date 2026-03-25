@@ -198,40 +198,35 @@ const RequestsTab = () => {
           
           actionTaken = true;
           console.log(`Action: Approved material ${materialId}, rows affected: ${matCount}`);
-        } else if (type === 'material_report') {
+        } else if (type === 'material_report' || type === 'removal_request') {
           const materialId = payload?.material_id;
-          if (!materialId) throw new Error("No material ID found in report payload");
+          if (!materialId) throw new Error(`No material ID found in ${type} payload`);
 
           if (status === 'approved') {
-            // "Approving" a report means we agree it should be removed/rejected
-            const { error: matError } = await supabase
-              .from('materials')
-              .update({ status: 'rejected' })
-              .eq('id', materialId);
-            if (matError) throw matError;
-            actionTaken = true;
-            console.log(`Action: Rejected material ${materialId} due to report`);
-          } else {
-            // "Rejecting" a report means we dismiss it
-            actionTaken = true;
-            console.log(`Action: Dismissed report for material ${materialId}`);
-          }
-        } else if (type === 'removal_request') {
-          const materialId = payload?.material_id;
-          if (!materialId) throw new Error("No material ID found in removal request payload");
-
-          if (status === 'approved') {
+            // "Approving" means we agree it should be removed
             const { error: deleteError } = await supabase
               .from('materials')
               .delete()
               .eq('id', materialId);
             
             if (deleteError) throw deleteError;
+            
+            // Clean up other requests for this material
+            await supabase.from('requests').update({ 
+              status: 'rejected', 
+              reviewed_by: currentUser.id,
+              review_note: 'Material removed due to report/request',
+              updated_at: new Date().toISOString()
+            })
+            .containedBy('payload', { material_id: materialId })
+            .eq('status', 'pending');
+
             actionTaken = true;
-            console.log(`Action: Deleted material ${materialId} per removal request`);
+            console.log(`Action: Deleted material ${materialId} per ${type}`);
           } else {
+            // Rejecting the request/report means we dismiss it
             actionTaken = true;
-            console.log(`Action: Rejected removal request for ${materialId}`);
+            console.log(`Action: Dismissed ${type} for ${materialId}`);
           }
         }
       }

@@ -24,6 +24,10 @@ export const MaterialDetail = () => {
   const [editData, setEditData] = useState({ title: '', description: '', type: '' });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Delete confirmation modal state
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     fetchMaterial();
   }, [id]);
@@ -80,56 +84,8 @@ export const MaterialDetail = () => {
     }
   };
 
-  const handleReport = async () => {
-    try {
-      console.log('--- START REPORT ---');
-      if (!session || !session.user) {
-        console.error('No session found');
-        return toast.error('You must be logged in to report');
-      }
+  // Unused handleReport removed to avoid confusion with the modal-based one
 
-      // 1. Get Reason
-      const reason = window.prompt("Why are you reporting this material?");
-      console.log('Prompt result:', reason);
-      
-      if (reason === null) {
-        console.log('Report cancelled by user');
-        return;
-      }
-      
-      if (!reason.trim()) {
-        toast.error('A reason is required to submit a report');
-        return;
-      }
-
-      // 2. Submit
-      toast.loading('Submitting report...', { id: 'report-submitting' });
-      console.log('Attempting DB insert...');
-
-      const { error } = await supabase
-        .from('requests')
-        .insert({
-          type: 'material_report',
-          requested_by: session.user.id,
-          payload: {
-            material_id: id,
-            reason: reason,
-            material_title: material.title
-          }
-        });
-
-      if (error) {
-        console.error('Supabase insert error:', error);
-        throw error;
-      }
-
-      console.log('Insert successful');
-      toast.success('Report submitted. A moderator will review it.', { id: 'report-submitting' });
-    } catch (error) {
-      console.error('Fatal error in handleReport:', error);
-      toast.error('Failed to submit report: ' + error.message, { id: 'report-submitting' });
-    }
-  };
 
 
 
@@ -181,8 +137,7 @@ export const MaterialDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this material? This action cannot be undone.")) return;
-    
+    setIsDeleting(true);
     const deletingToast = toast.loading("Deleting material...", { id: 'delete-material' });
     try {
       console.log('--- DELETE ATTEMPT ---');
@@ -190,11 +145,6 @@ export const MaterialDetail = () => {
       console.log('Current User ID:', user?.id);
       console.log('Current Role:', role);
       console.log('Material Owner:', material.uploaded_by);
-
-      console.log('--- ATTEMPTING DELETE ---');
-      console.log('Target ID:', id);
-      console.log('Logged User:', user?.id);
-      console.log('Logged Role:', role);
 
       const { error, status, count } = await supabase
         .from('materials')
@@ -208,26 +158,37 @@ export const MaterialDetail = () => {
         throw error;
       }
 
-      // If count is null or 0, it means no rows were affected (likely RLS)
-      if (count === 0) {
-        // Double check if it still exists
-        const { data: stillThere } = await supabase.from('materials').select('id').eq('id', id).single();
+      // count is null or 0 → RLS silently blocked the delete (no error returned, but nothing deleted)
+      if (count === null || count === 0) {
+        // Verify if it still exists
+        const { data: stillThere } = await supabase
+          .from('materials')
+          .select('id')
+          .eq('id', id)
+          .maybeSingle();
+
         if (stillThere) {
-          const msg = `Permission Denied (Status ${status}): The database did not allow the deletion. Check if your role (${role}) has delete permissions for this material.`;
-          alert(msg);
+          // Material still exists → RLS blocked it
+          const msg = `Delete was blocked by database permissions. Your role (${role}) may not have delete access. Please re-apply the RLS delete policy in Supabase.`;
+          console.error('RLS blocked delete. material still exists:', id);
           throw new Error(msg);
         } else {
-          toast.success("Material already removed", { id: 'delete-material' });
+          // Material is already gone → treat as success
+          toast.success("Material removed successfully", { id: 'delete-material' });
+          setIsConfirmDeleteOpen(false);
           setTimeout(() => navigate('/'), 1000);
           return;
         }
       }
 
       toast.success("Material deleted successfully", { id: 'delete-material' });
+      setIsConfirmDeleteOpen(false);
       setTimeout(() => navigate('/'), 1000);
     } catch (error) {
       console.error('Fatal delete error:', error);
       toast.error(error.message || "Failed to delete material", { id: 'delete-material' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -275,7 +236,7 @@ export const MaterialDetail = () => {
   const isOwner = user?.id === material.uploaded_by;
   const lowerRole = role?.toLowerCase();
   const canManage = lowerRole === 'admin' || lowerRole === 'teacher';
-  const canReport = !isOwner && (lowerRole === 'student' || lowerRole === 'verifier');
+  const canReport = lowerRole === 'student' || lowerRole === 'verifier';
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -423,20 +384,21 @@ export const MaterialDetail = () => {
                   <button 
                     onClick={() => setIsReportModalOpen(true)}
                     className="btn btn-ghost text-red-400 hover:text-red-300 hover:bg-red-400/10 flex-1 flex justify-center items-center gap-2"
+                    title={isOwner ? "Request removal of your own material" : "Report this material"}
                   >
-                    <AlertTriangle className="h-4 w-4" /> Report / Request Removal
+                    <AlertTriangle className="h-4 w-4" /> {isOwner ? "Request Removal" : "Report"}
                   </button>
                 )}
               </div>
-              {isOwner && (
+              {isOwner && !canManage && (
                 <p className="text-[10px] text-center text-slate-500 italic mt-2">You uploaded this material</p>
               )}
             </div>
           </div>
 
-          {canManage && (
-            <div className="card p-4 border-red-500/20 bg-red-500/5 shadow-inner">
-              <h3 className="text-xs font-bold text-red-500 mb-3 uppercase tracking-widest opacity-80">Management Tools</h3>
+          {(canManage || isOwner) && (
+            <div className={`card p-4 border-${isOwner && !canManage ? 'blue-500/20' : 'red-500/20'} bg-${isOwner && !canManage ? 'blue-500/5' : 'red-500/5'} shadow-inner`}>
+              <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-widest opacity-80">{canManage ? 'Management Tools' : 'Owner Actions'}</h3>
               <div className="flex gap-2">
                 <button 
                   onClick={handleUpdate}
@@ -445,7 +407,8 @@ export const MaterialDetail = () => {
                   <Edit className="h-4 w-4" /> Edit
                 </button>
                 <button 
-                  onClick={handleDelete}
+                  id="delete-material-btn"
+                  onClick={() => setIsConfirmDeleteOpen(true)}
                   className="btn btn-danger btn-sm flex-1 flex items-center justify-center gap-2"
                 >
                   <Trash2 className="h-4 w-4" /> Delete
@@ -456,13 +419,56 @@ export const MaterialDetail = () => {
                 <p>Diagnostic Info:</p>
                 <p>User ID: {user?.id?.slice(0, 8)}...</p>
                 <p>Role: <span className="text-accent">{role}</span></p>
-                <p>Owner ID: {material.uploaded_by?.slice(0, 8)}...</p>
+                <p>Is Owner: <span className={isOwner ? "text-green-500" : ""}>{isOwner ? 'YES' : 'NO'}</span></p>
               </div>
-              {(role === 'admin' || role === 'teacher') && !isOwner && <p className="text-[10px] text-slate-500 mt-2 text-center opacity-70">Staff Access</p>}
+              {canManage && !isOwner && <p className="text-[10px] text-slate-500 mt-2 text-center opacity-70">Staff Access</p>}
             </div>
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isConfirmDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="card w-full max-w-sm p-6 bg-slate-900 border border-red-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-red-500/10">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Delete Material</h3>
+            </div>
+            <p className="text-sm text-slate-300 mb-1">
+              Are you sure you want to permanently delete:
+            </p>
+            <p className="text-sm font-semibold text-white mb-4 bg-slate-800 px-3 py-2 rounded border border-slate-700 truncate">
+              {material?.title}
+            </p>
+            <p className="text-xs text-red-400 mb-6">This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                id="cancel-delete-btn"
+                onClick={() => setIsConfirmDeleteOpen(false)}
+                disabled={isDeleting}
+                className="btn btn-ghost flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                id="confirm-delete-btn"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="btn btn-danger flex-1 flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <><span className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" /> Deleting...</>
+                ) : (
+                  <><Trash2 className="h-4 w-4" /> Confirm Delete</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Report Modal Integration */}
       {isReportModalOpen && (
