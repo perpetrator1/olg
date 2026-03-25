@@ -9,10 +9,19 @@ export const Home = () => {
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTypes, setSelectedTypes] = useState([]);
+
+  const toggleType = (value) => {
+    setSelectedTypes(prev => 
+      prev.includes(value) 
+        ? prev.filter(t => t !== value)
+        : [...prev, value]
+    );
+  };
 
   useEffect(() => {
     fetchMaterials();
-  }, [searchQuery]);
+  }, [searchQuery, selectedTypes]);
 
   const fetchMaterials = async () => {
     setLoading(true);
@@ -30,6 +39,10 @@ export const Home = () => {
 
       if (searchQuery) {
         query = query.textSearch('title', searchQuery, { type: 'websearch' }); // Simplified search
+      }
+
+      if (selectedTypes.length > 0) {
+        query = query.in('type', selectedTypes);
       }
 
       const { data, error } = await query;
@@ -60,10 +73,20 @@ export const Home = () => {
             <div>
               <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Type</label>
               <div className="space-y-2">
-                {['Notes', 'Question Paper', 'Assignment', 'Reference'].map(type => (
-                  <label key={type} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                    <input type="checkbox" className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent" />
-                    {type}
+                {[
+                  { label: 'Notes', value: 'notes' }, 
+                  { label: 'Question Paper', value: 'question_paper' }, 
+                  { label: 'Assignment', value: 'assignment' }, 
+                  { label: 'Reference', value: 'reference' }
+                ].map(type => (
+                  <label key={type.value} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedTypes.includes(type.value)}
+                      onChange={() => toggleType(type.value)}
+                      className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-accent focus:ring-accent" 
+                    />
+                    {type.label}
                   </label>
                 ))}
               </div>
@@ -107,7 +130,7 @@ export const Home = () => {
             {materials.map((m) => (
               <Link to={`/materials/${m.id}`} key={m.id} className="card card-hover p-5 flex flex-col h-full block">
                 <div className="flex justify-between items-start mb-3">
-                  <span className="badge badge-primary uppercase text-[10px] tracking-wider">{m.type}</span>
+                  <span className="badge badge-primary uppercase text-[10px] tracking-wider">{m.type?.replace('_', ' ')}</span>
                   <span className="text-xs text-slate-500">{new Date(m.created_at).toLocaleDateString()}</span>
                 </div>
                 
