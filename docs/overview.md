@@ -1,13 +1,13 @@
 
-# Open Learn Grid — 1-Day Build Plan (Refined for S2S Federation)
+# Open Learning Grid — 1-Day Build Plan (Refined for S2S Federation)
 
-> **Purpose of this document:** This is a complete, unambiguous specification for building *Open Learn Grid* — a federated educational material management platform — using Lovable.dev + Supabase. Every section is written to eliminate guesswork for the AI builder. Follow sections in order.
+> **Purpose of this document:** This is a complete, unambiguous specification for building *Open Learning Grid* — a federated educational material management platform — using Lovable.dev + Supabase. Every section is written to eliminate guesswork for the AI builder. Follow sections in order.
 
 ---
 
 ## 1. Project Overview
 
-**App name:** Open Learn Grid  
+**App name:** Open Learning Grid  
 **Tagline:** A decentralised, federated educational material platform for colleges.  
 **Core idea:** Colleges run their own "instance" of this platform. Each instance connects to other colleges by storing their public Supabase URLs. When users visit the Federation page, the app live-queries those peer databases to create a unified feed of shared educational materials.
 
@@ -273,7 +273,7 @@ where email = 'muneersclassb@gmail.com';
 > Copy the entire block below (from the triple-backtick to the closing triple-backtick) and paste it into Lovable's chat as the very first message.
 
 ```text
-Build a full-stack web application called "Open Learn Grid". This is a federated educational material management platform for colleges. Use React + Tailwind CSS (no other CSS framework) and Supabase for all backend concerns (auth, database, file storage, realtime).
+Build a full-stack web application called "Open Learning Grid". This is a federated educational material management platform for colleges. Use React + Tailwind CSS (no other CSS framework) and Supabase for all backend concerns (auth, database, file storage, realtime).
 
 ---
 

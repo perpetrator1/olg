@@ -122,7 +122,7 @@ export const MainLayout = () => {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2 font-bold text-xl text-slate-900 dark:text-white shrink-0">
             <BookOpen className="h-6 w-6 text-accent shrink-0" />
-            <span className="hidden sm:block truncate">Open Learn Grid</span>
+            <span className="hidden sm:block truncate">Open Learning Grid</span>
             <span className="sm:hidden">OLG</span>
           </Link>
 

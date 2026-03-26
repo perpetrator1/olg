@@ -56,7 +56,7 @@ export const Register = () => {
             <UserPlus className="h-6 w-6 text-accent" />
           </div>
           <h2 className="text-2xl font-bold text-white">Create Account</h2>
-          <p className="text-slate-400 mt-2 text-center">Join Open Learn Grid</p>
+          <p className="text-slate-400 mt-2 text-center">Join Open Learning Grid</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

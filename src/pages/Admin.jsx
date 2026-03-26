@@ -396,7 +396,7 @@ const InstanceSettingsTab = () => (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium mb-1 text-slate-300">Instance Name</label>
-          <input type="text" className="input" defaultValue="Open Learn Grid (Local)" />
+          <input type="text" className="input" defaultValue="Open Learning Grid (Local)" />
         </div>
         <div className="flex items-end">
           <label className="flex items-center gap-2 cursor-pointer pt-2">

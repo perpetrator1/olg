@@ -99,7 +99,7 @@ export const Home = () => {
       <main className="flex-1">
         {!session && (
           <div className="card p-8 mb-8 bg-gradient-to-r from-slate-800 to-slate-900 border-accent/20">
-            <h1 className="text-3xl font-bold mb-2">Open Learn Grid</h1>
+            <h1 className="text-3xl font-bold mb-2">Open Learning Grid</h1>
             <p className="text-slate-300 mb-6 max-w-2xl">A decentralised, federated educational material platform for colleges. Discover notes, past papers, and reference materials shared by your peers.</p>
             <div className="flex gap-4">
               <Link to="/auth/register" className="btn btn-primary">Join the Grid</Link>

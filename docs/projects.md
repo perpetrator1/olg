@@ -1,7 +1,7 @@
 # Projects Tracker
 
 ## Current Project
-- **Name**: Open Learn Grid
+- **Name**: Open Learning Grid
 - **Status**: Development
 - **Path**: `/home/perpetrator/olg`
 
