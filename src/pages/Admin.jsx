@@ -5,11 +5,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-// Placeholder Components for Tabs
+// User Management Tab
 const UsersTab = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterRole, setFilterRole] = useState('all');
+  const [confirmAction, setConfirmAction] = useState(null); // { userId, action, roleName, roleId }
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -32,10 +36,22 @@ const UsersTab = () => {
   };
 
   const handleRoleChange = async (userId, roleId) => {
+    const targetRole = roles.find(r => r.id === roleId);
+    // Confirm before promoting to admin
+    if (targetRole?.name === 'admin') {
+      setConfirmAction({ userId, roleId, roleName: 'admin', action: 'promote' });
+      return;
+    }
+    await applyRoleChange(userId, roleId);
+  };
+
+  const applyRoleChange = async (userId, roleId) => {
     try {
       const { error } = await supabase.from('profiles').update({ role_id: roleId }).eq('id', userId);
       if (error) throw error;
-      toast.success("User role updated");
+      const roleName = roles.find(r => r.id === roleId)?.name || 'unknown';
+      toast.success(`Role updated to ${roleName}`);
+      setConfirmAction(null);
       fetchData();
     } catch (e) {
       console.error(e);
@@ -43,11 +59,81 @@ const UsersTab = () => {
     }
   };
 
+  const handleBanToggle = async (userId, currentlyBanned) => {
+    if (userId === currentUser.id) return toast.error("You can't ban yourself");
+    const action = currentlyBanned ? 'unban' : 'ban';
+    try {
+      const { error } = await supabase.from('profiles').update({ is_banned: !currentlyBanned }).eq('id', userId);
+      if (error) throw error;
+      toast.success(`User ${action}ned successfully`);
+      fetchData();
+    } catch (e) {
+      console.error(e);
+      toast.error(`Failed to ${action} user`);
+    }
+  };
+
+  const getRoleBadgeClass = (roleName) => {
+    switch (roleName) {
+      case 'admin': return 'bg-red-500/20 text-red-400';
+      case 'teacher': return 'bg-purple-500/20 text-purple-400';
+      case 'verifier': return 'bg-blue-500/20 text-blue-400';
+      default: return 'bg-slate-700 text-slate-300';
+    }
+  };
+
+  const filtered = users.filter(u => {
+    const matchSearch = !search || 
+      u.username?.toLowerCase().includes(search.toLowerCase()) ||
+      u.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase());
+    const matchRole = filterRole === 'all' || u.roles?.name === filterRole;
+    return matchSearch && matchRole;
+  });
+
   return (
     <div className="card p-6">
-      <h3 className="text-xl font-bold mb-4">User Management</h3>
-      <p className="text-slate-400">Manage user roles.</p>
-      <div className="table-container mt-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h3 className="text-xl font-bold">User Management</h3>
+          <p className="text-slate-400 text-sm mt-1">{users.length} total users · Assign roles and manage access</p>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex-1">
+          <input
+            className="input"
+            placeholder="Search by name, username, or email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <select className="input w-auto" value={filterRole} onChange={e => setFilterRole(e.target.value)}>
+          <option value="all">All Roles</option>
+          {roles.map(r => <option key={r.id} value={r.name}>{r.name.charAt(0).toUpperCase() + r.name.slice(1)}</option>)}
+        </select>
+      </div>
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="mb-6 p-4 rounded-lg border border-red-500/30 bg-red-500/10">
+          <p className="text-sm text-red-300 mb-3">
+            <strong>⚠ Confirm:</strong> Are you sure you want to promote this user to <strong>Admin</strong>? Admins have full control over the platform.
+          </p>
+          <div className="flex gap-2">
+            <button className="btn btn-danger btn-sm" onClick={() => applyRoleChange(confirmAction.userId, confirmAction.roleId)}>
+              <Check className="h-3 w-3 mr-1" /> Yes, Promote to Admin
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => setConfirmAction(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-slate-500 mb-2">{filtered.length} user{filtered.length !== 1 ? 's' : ''} shown</p>
+
+      <div className="table-container">
         <table className="data-table">
           <thead>
             <tr>
@@ -55,28 +141,55 @@ const UsersTab = () => {
               <th>Username</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="4" className="text-center py-8 text-slate-500">Loading users...</td>
+                <td colSpan="6" className="text-center py-8 text-slate-500">Loading users...</td>
               </tr>
-            ) : users.map(user => (
-              <tr key={user.id}>
-                <td>{user.full_name || 'N/A'}</td>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="text-center py-8 text-slate-500">No users match your search.</td>
+              </tr>
+            ) : filtered.map(user => (
+              <tr key={user.id} className={user.is_banned ? 'opacity-60' : ''}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{user.full_name || 'N/A'}</span>
+                    {user.id === currentUser.id && <span className="badge badge-primary text-[10px]">You</span>}
+                  </div>
+                </td>
                 <td>{user.username}</td>
-                <td>{user.email || 'N/A'}</td>
+                <td className="text-slate-400 text-xs">{user.email || 'N/A'}</td>
                 <td>
                   <select 
                     className="input py-1 px-2 text-sm bg-slate-800 border-slate-700"
                     value={user.role_id || ''}
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                    disabled={user.id === currentUser.id}
                   >
                     {roles.map(r => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
+                      <option key={r.id} value={r.id}>{r.name.charAt(0).toUpperCase() + r.name.slice(1)}</option>
                     ))}
                   </select>
+                </td>
+                <td>
+                  {user.is_banned 
+                    ? <span className="badge badge-danger">Banned</span>
+                    : <span className="badge badge-success">Active</span>}
+                </td>
+                <td>
+                  {user.id !== currentUser.id && (
+                    <button
+                      className={`btn btn-sm ${user.is_banned ? 'btn-primary' : 'btn-danger'}`}
+                      onClick={() => handleBanToggle(user.id, user.is_banned)}
+                    >
+                      {user.is_banned ? 'Unban' : 'Ban'}
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
