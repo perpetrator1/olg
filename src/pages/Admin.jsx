@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Settings, Activity, Server, FileText, Database, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Users, Settings, Activity, Server, FileText, Database, CheckCircle, XCircle, Info, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -351,43 +351,513 @@ const RequestsTab = () => {
   );
 };
 
-const SystemTab = () => (
-  <div className="card p-6">
-    <h3 className="text-xl font-bold mb-4">Departments, Courses, Subjects</h3>
-    <p className="text-slate-400">CRUD operations for academic taxonomy.</p>
-  </div>
-);
+const SystemTab = () => {
+  const [subTab, setSubTab] = useState('departments');
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-const AuditLogTab = () => (
-  <div className="card p-6">
-    <h3 className="text-xl font-bold mb-4">Audit Log</h3>
-    <p className="text-slate-400 mb-6">Timeline of system actions.</p>
-    
-    <div className="relative pl-6 border-l-2 border-slate-700 space-y-8">
-      {/* Timeline item */}
-      <div className="relative">
-        <div className="absolute -left-[1.95rem] top-1 h-4 w-4 rounded-full bg-accent border-4 border-slate-900"></div>
-        <div className="text-xs text-slate-500 mb-1">10 minutes ago</div>
-        <div className="flex gap-2 items-center mb-2">
-          <span className="font-medium text-slate-900 dark:text-white">Admin User</span>
-          <span className="badge badge-success">updated_role</span>
-        </div>
-        <div className="text-sm text-slate-400">Changed role of <span className="text-slate-300">janesmith</span> to Verifier.</div>
+  // Edit / Add state
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [addingNew, setAddingNew] = useState(false);
+  const [newForm, setNewForm] = useState({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [deptRes, courseRes, subRes] = await Promise.all([
+        supabase.from('departments').select('*').order('name'),
+        supabase.from('courses').select('*, department:departments(name)').order('name'),
+        supabase.from('subjects').select('*').order('name'),
+      ]);
+      setDepartments(deptRes.data || []);
+      setCourses(courseRes.data || []);
+      setSubjects(subRes.data || []);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to load taxonomy data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForms = () => {
+    setEditingId(null);
+    setEditForm({});
+    setAddingNew(false);
+    setNewForm({});
+    setDeleteConfirmId(null);
+  };
+
+  // ── Generic CRUD helpers ──────────────────────────────────
+  const handleAdd = async (table, data) => {
+    try {
+      const { error } = await supabase.from(table).insert(data);
+      if (error) throw error;
+      toast.success(`Added successfully`);
+      resetForms();
+      fetchAll();
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Failed to add');
+    }
+  };
+
+  const handleUpdate = async (table, id, data) => {
+    try {
+      const { error } = await supabase.from(table).update(data).eq('id', id);
+      if (error) throw error;
+      toast.success(`Updated successfully`);
+      resetForms();
+      fetchAll();
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Failed to update');
+    }
+  };
+
+  const handleDelete = async (table, id) => {
+    try {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+      toast.success(`Deleted successfully`);
+      resetForms();
+      fetchAll();
+    } catch (e) {
+      console.error(e);
+      toast.error(e.message || 'Failed to delete');
+    }
+  };
+
+  // ── Sub-tab buttons ───────────────────────────────────────
+  const subTabs = [
+    { id: 'departments', label: 'Departments' },
+    { id: 'courses', label: 'Courses' },
+    { id: 'subjects', label: 'Subjects' },
+  ];
+
+  // ── Departments panel ─────────────────────────────────────
+  const renderDepartments = () => (
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-slate-400 text-sm">{departments.length} department{departments.length !== 1 ? 's' : ''}</p>
+        <button className="btn btn-primary btn-sm" onClick={() => { resetForms(); setAddingNew(true); setNewForm({ name: '', code: '' }); }}>
+          <Plus className="h-4 w-4 mr-1" /> Add Department
+        </button>
       </div>
-      
-      {/* Timeline item */}
-      <div className="relative">
-        <div className="absolute -left-[1.95rem] top-1 h-4 w-4 rounded-full bg-blue-500 border-4 border-slate-900"></div>
-        <div className="text-xs text-slate-500 mb-1">2 hours ago</div>
-        <div className="flex gap-2 items-center mb-2">
-          <span className="font-medium text-slate-900 dark:text-white">System</span>
-          <span className="badge badge-primary">new_instance</span>
-        </div>
-        <div className="text-sm text-slate-400">Added peer node <span className="text-slate-300">MIT OpenCourseWare</span>.</div>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th className="w-40">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {addingNew && (
+              <tr className="bg-accent/5">
+                <td>
+                  <input className="input py-1 px-2 text-sm" placeholder="Department name" value={newForm.name || ''} onChange={e => setNewForm({ ...newForm, name: e.target.value })} autoFocus />
+                </td>
+                <td>
+                  <input className="input py-1 px-2 text-sm" placeholder="e.g. CS" value={newForm.code || ''} onChange={e => setNewForm({ ...newForm, code: e.target.value })} />
+                </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn btn-primary btn-sm" onClick={() => { if (!newForm.name?.trim()) return toast.error('Name is required'); handleAdd('departments', { name: newForm.name.trim(), code: newForm.code?.trim() || null }); }}>
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {loading ? (
+              <tr><td colSpan="3" className="text-center py-8 text-slate-500">Loading...</td></tr>
+            ) : departments.length === 0 && !addingNew ? (
+              <tr><td colSpan="3" className="text-center py-8 text-slate-500">No departments yet. Add one to get started.</td></tr>
+            ) : departments.map(d => (
+              <tr key={d.id}>
+                <td>
+                  {editingId === d.id
+                    ? <input className="input py-1 px-2 text-sm" value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                    : <span className="font-medium">{d.name}</span>}
+                </td>
+                <td>
+                  {editingId === d.id
+                    ? <input className="input py-1 px-2 text-sm" value={editForm.code || ''} onChange={e => setEditForm({ ...editForm, code: e.target.value })} />
+                    : <span className="badge badge-secondary">{d.code || '—'}</span>}
+                </td>
+                <td>
+                  {deleteConfirmId === d.id ? (
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-red-400">Delete?</span>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete('departments', d.id)}>Yes</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setDeleteConfirmId(null)}>No</button>
+                    </div>
+                  ) : editingId === d.id ? (
+                    <div className="flex gap-2">
+                      <button className="btn btn-primary btn-sm" onClick={() => { if (!editForm.name?.trim()) return toast.error('Name is required'); handleUpdate('departments', d.id, { name: editForm.name.trim(), code: editForm.code?.trim() || null }); }}>
+                        <Check className="h-3 w-3 mr-1" /> Save
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button className="btn btn-secondary btn-sm" onClick={() => { resetForms(); setEditingId(d.id); setEditForm({ name: d.name, code: d.code || '' }); }}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => { resetForms(); setDeleteConfirmId(d.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
+    </>
+  );
+
+  // ── Courses panel ─────────────────────────────────────────
+  const renderCourses = () => (
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-slate-400 text-sm">{courses.length} course{courses.length !== 1 ? 's' : ''}</p>
+        <button className="btn btn-primary btn-sm" onClick={() => { resetForms(); setAddingNew(true); setNewForm({ name: '', department_id: departments[0]?.id || '', duration_semesters: 8 }); }}>
+          <Plus className="h-4 w-4 mr-1" /> Add Course
+        </button>
+      </div>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Department</th>
+              <th>Semesters</th>
+              <th className="w-40">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {addingNew && (
+              <tr className="bg-accent/5">
+                <td>
+                  <input className="input py-1 px-2 text-sm" placeholder="Course name" value={newForm.name || ''} onChange={e => setNewForm({ ...newForm, name: e.target.value })} autoFocus />
+                </td>
+                <td>
+                  <select className="input py-1 px-2 text-sm" value={newForm.department_id || ''} onChange={e => setNewForm({ ...newForm, department_id: e.target.value })}>
+                    <option value="">— None —</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <input type="number" className="input py-1 px-2 text-sm w-20" min="1" max="16" value={newForm.duration_semesters ?? 8} onChange={e => setNewForm({ ...newForm, duration_semesters: parseInt(e.target.value) || 8 })} />
+                </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn btn-primary btn-sm" onClick={() => { if (!newForm.name?.trim()) return toast.error('Name is required'); handleAdd('courses', { name: newForm.name.trim(), department_id: newForm.department_id || null, duration_semesters: newForm.duration_semesters || 8 }); }}>
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {loading ? (
+              <tr><td colSpan="4" className="text-center py-8 text-slate-500">Loading...</td></tr>
+            ) : courses.length === 0 && !addingNew ? (
+              <tr><td colSpan="4" className="text-center py-8 text-slate-500">No courses yet. Add one to get started.</td></tr>
+            ) : courses.map(c => (
+              <tr key={c.id}>
+                <td>
+                  {editingId === c.id
+                    ? <input className="input py-1 px-2 text-sm" value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                    : <span className="font-medium">{c.name}</span>}
+                </td>
+                <td>
+                  {editingId === c.id
+                    ? <select className="input py-1 px-2 text-sm" value={editForm.department_id || ''} onChange={e => setEditForm({ ...editForm, department_id: e.target.value })}>
+                        <option value="">— None —</option>
+                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    : <span className="text-slate-300">{c.department?.name || '—'}</span>}
+                </td>
+                <td>
+                  {editingId === c.id
+                    ? <input type="number" className="input py-1 px-2 text-sm w-20" min="1" max="16" value={editForm.duration_semesters ?? 8} onChange={e => setEditForm({ ...editForm, duration_semesters: parseInt(e.target.value) || 8 })} />
+                    : <span>{c.duration_semesters}</span>}
+                </td>
+                <td>
+                  {deleteConfirmId === c.id ? (
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-red-400">Delete?</span>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete('courses', c.id)}>Yes</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setDeleteConfirmId(null)}>No</button>
+                    </div>
+                  ) : editingId === c.id ? (
+                    <div className="flex gap-2">
+                      <button className="btn btn-primary btn-sm" onClick={() => { if (!editForm.name?.trim()) return toast.error('Name is required'); handleUpdate('courses', c.id, { name: editForm.name.trim(), department_id: editForm.department_id || null, duration_semesters: editForm.duration_semesters || 8 }); }}>
+                        <Check className="h-3 w-3 mr-1" /> Save
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button className="btn btn-secondary btn-sm" onClick={() => { resetForms(); setEditingId(c.id); setEditForm({ name: c.name, department_id: c.department_id || '', duration_semesters: c.duration_semesters }); }}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => { resetForms(); setDeleteConfirmId(c.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+
+  // ── Subjects panel ────────────────────────────────────────
+  const renderSubjects = () => (
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <p className="text-slate-400 text-sm">{subjects.length} subject{subjects.length !== 1 ? 's' : ''}</p>
+        <button className="btn btn-primary btn-sm" onClick={() => { resetForms(); setAddingNew(true); setNewForm({ name: '', code: '', is_common: false }); }}>
+          <Plus className="h-4 w-4 mr-1" /> Add Subject
+        </button>
+      </div>
+      <div className="table-container">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Common</th>
+              <th className="w-40">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {addingNew && (
+              <tr className="bg-accent/5">
+                <td>
+                  <input className="input py-1 px-2 text-sm" placeholder="Subject name" value={newForm.name || ''} onChange={e => setNewForm({ ...newForm, name: e.target.value })} autoFocus />
+                </td>
+                <td>
+                  <input className="input py-1 px-2 text-sm" placeholder="e.g. CS101" value={newForm.code || ''} onChange={e => setNewForm({ ...newForm, code: e.target.value })} />
+                </td>
+                <td>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent w-4 h-4" checked={newForm.is_common || false} onChange={e => setNewForm({ ...newForm, is_common: e.target.checked })} />
+                    <span className="text-xs text-slate-400">Common</span>
+                  </label>
+                </td>
+                <td>
+                  <div className="flex gap-2">
+                    <button className="btn btn-primary btn-sm" onClick={() => { if (!newForm.name?.trim()) return toast.error('Name is required'); handleAdd('subjects', { name: newForm.name.trim(), code: newForm.code?.trim() || null, is_common: newForm.is_common || false }); }}>
+                      <Check className="h-3 w-3 mr-1" /> Save
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            {loading ? (
+              <tr><td colSpan="4" className="text-center py-8 text-slate-500">Loading...</td></tr>
+            ) : subjects.length === 0 && !addingNew ? (
+              <tr><td colSpan="4" className="text-center py-8 text-slate-500">No subjects yet. Add one to get started.</td></tr>
+            ) : subjects.map(s => (
+              <tr key={s.id}>
+                <td>
+                  {editingId === s.id
+                    ? <input className="input py-1 px-2 text-sm" value={editForm.name || ''} onChange={e => setEditForm({ ...editForm, name: e.target.value })} autoFocus />
+                    : <span className="font-medium">{s.name}</span>}
+                </td>
+                <td>
+                  {editingId === s.id
+                    ? <input className="input py-1 px-2 text-sm" value={editForm.code || ''} onChange={e => setEditForm({ ...editForm, code: e.target.value })} />
+                    : <span className="badge badge-secondary">{s.code || '—'}</span>}
+                </td>
+                <td>
+                  {editingId === s.id
+                    ? <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent w-4 h-4" checked={editForm.is_common || false} onChange={e => setEditForm({ ...editForm, is_common: e.target.checked })} />
+                        <span className="text-xs text-slate-400">Common</span>
+                      </label>
+                    : s.is_common ? <span className="badge badge-success">Yes</span> : <span className="badge badge-secondary">No</span>}
+                </td>
+                <td>
+                  {deleteConfirmId === s.id ? (
+                    <div className="flex gap-2 items-center">
+                      <span className="text-xs text-red-400">Delete?</span>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete('subjects', s.id)}>Yes</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setDeleteConfirmId(null)}>No</button>
+                    </div>
+                  ) : editingId === s.id ? (
+                    <div className="flex gap-2">
+                      <button className="btn btn-primary btn-sm" onClick={() => { if (!editForm.name?.trim()) return toast.error('Name is required'); handleUpdate('subjects', s.id, { name: editForm.name.trim(), code: editForm.code?.trim() || null, is_common: editForm.is_common || false }); }}>
+                        <Check className="h-3 w-3 mr-1" /> Save
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={resetForms}>Cancel</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button className="btn btn-secondary btn-sm" onClick={() => { resetForms(); setEditingId(s.id); setEditForm({ name: s.name, code: s.code || '', is_common: s.is_common }); }}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </button>
+                      <button className="btn btn-danger btn-sm" onClick={() => { resetForms(); setDeleteConfirmId(s.id); }}>
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="card p-6">
+      <h3 className="text-xl font-bold mb-1">Academic Taxonomy</h3>
+      <p className="text-slate-400 text-sm mb-5">Manage departments, courses, and subjects.</p>
+
+      {/* Sub-tab navigation */}
+      <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg mb-6 border border-slate-700/50">
+        {subTabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => { setSubTab(t.id); resetForms(); }}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              subTab === t.id
+                ? 'bg-accent text-white shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Sub-tab content */}
+      {subTab === 'departments' && renderDepartments()}
+      {subTab === 'courses' && renderCourses()}
+      {subTab === 'subjects' && renderSubjects()}
     </div>
-  </div>
-);
+  );
+};
+
+const AuditLogTab = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('requests')
+        .select(`*, reviewer:profiles!requests_reviewed_by_fkey(username), requester:profiles!requests_requested_by_fkey(username)`)
+        .in('status', ['approved', 'rejected'])
+        .order('updated_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to load audit log');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return '';
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  const getTypeColor = (type) => {
+    switch (type) {
+      case 'role_upgrade': return 'bg-purple-500';
+      case 'note_approval': case 'material_approval': return 'bg-accent';
+      case 'material_report': return 'bg-orange-500';
+      case 'removal_request': return 'bg-red-500';
+      default: return 'bg-blue-500';
+    }
+  };
+
+  const getBadgeClass = (status) => status === 'approved' ? 'badge-success' : 'badge-danger';
+
+  const getDescription = (log) => {
+    const payload = log.payload || {};
+    const requester = log.requester?.username || 'Unknown';
+    switch (log.type) {
+      case 'role_upgrade':
+        return <>{log.status === 'approved' ? 'Promoted' : 'Denied promotion of'} <span className="text-slate-300">{requester}</span> to <span className="text-slate-300">{payload.requested_role || payload.role || '?'}</span></>;
+      case 'note_approval': case 'material_approval':
+        return <>{log.status === 'approved' ? 'Approved' : 'Rejected'} material by <span className="text-slate-300">{requester}</span></>;
+      case 'material_report':
+        return <>{log.status === 'approved' ? 'Removed reported material' : 'Dismissed report'} — reason: <span className="text-slate-300">{payload.reason || '—'}</span></>;
+      case 'removal_request':
+        return <>{log.status === 'approved' ? 'Approved removal' : 'Denied removal'} requested by <span className="text-slate-300">{requester}</span></>;
+      default:
+        return <>{log.status} request from <span className="text-slate-300">{requester}</span></>;
+    }
+  };
+
+  return (
+    <div className="card p-6">
+      <h3 className="text-xl font-bold mb-4">Audit Log</h3>
+      <p className="text-slate-400 mb-6">Timeline of reviewed admin actions.</p>
+
+      {loading ? (
+        <div className="text-center py-12 text-slate-500">Loading audit log...</div>
+      ) : logs.length === 0 ? (
+        <div className="text-center py-12 text-slate-500">No audit entries yet. Process some requests to see them here.</div>
+      ) : (
+        <div className="relative pl-6 border-l-2 border-slate-700 space-y-8">
+          {logs.map(log => (
+            <div key={log.id} className="relative">
+              <div className={`absolute -left-[1.95rem] top-1 h-4 w-4 rounded-full ${getTypeColor(log.type)} border-4 border-slate-900`}></div>
+              <div className="text-xs text-slate-500 mb-1">{timeAgo(log.updated_at)}</div>
+              <div className="flex gap-2 items-center mb-2">
+                <span className="font-medium text-slate-900 dark:text-white">{log.reviewer?.username || 'System'}</span>
+                <span className={`badge ${getBadgeClass(log.status)}`}>{log.type.replace(/_/g, ' ')}</span>
+                <span className={`badge ${log.status === 'approved' ? 'badge-success' : 'badge-danger'}`}>{log.status}</span>
+              </div>
+              <div className="text-sm text-slate-400">{getDescription(log)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const InstanceSettingsTab = () => (
   <div className="space-y-6">

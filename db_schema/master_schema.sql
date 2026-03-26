@@ -210,6 +210,42 @@ FOR UPDATE USING (
 DROP POLICY IF EXISTS "Requests insert policy" ON requests;
 CREATE POLICY "Requests insert policy" ON requests FOR INSERT WITH CHECK (auth.uid() = requested_by);
 
+-- D. DEPARTMENTS
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "departments_select" ON departments;
+CREATE POLICY "departments_select" ON departments FOR SELECT USING (true);
+DROP POLICY IF EXISTS "departments_modify" ON departments;
+CREATE POLICY "departments_modify" ON departments FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
+  )
+);
+
+-- E. COURSES
+ALTER TABLE courses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "courses_select" ON courses;
+CREATE POLICY "courses_select" ON courses FOR SELECT USING (true);
+DROP POLICY IF EXISTS "courses_modify" ON courses;
+CREATE POLICY "courses_modify" ON courses FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
+  )
+);
+
+-- F. SUBJECTS
+ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "subjects_select" ON subjects;
+CREATE POLICY "subjects_select" ON subjects FOR SELECT USING (true);
+DROP POLICY IF EXISTS "subjects_modify" ON subjects;
+CREATE POLICY "subjects_modify" ON subjects FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles p JOIN roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid() AND r.name IN ('admin', 'teacher')
+  )
+);
+
 -- 5. PERFORMANCE INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status);
