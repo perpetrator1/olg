@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../lib/supabase';
@@ -14,12 +14,33 @@ export const UploadMaterial = () => {
     title: '',
     description: '',
     type: 'notes',
-    subject_id: null
+    subject_id: ''
   });
   
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Taxonomy state
+  const [departments, setDepartments] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedDept, setSelectedDept] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState('');
+
+  useEffect(() => {
+    const fetchTaxonomy = async () => {
+      const [deptRes, courseRes, subRes] = await Promise.all([
+        supabase.from('departments').select('*').order('name'),
+        supabase.from('courses').select('*').order('name'),
+        supabase.from('subjects').select('*').order('name'),
+      ]);
+      setDepartments(deptRes.data || []);
+      setCourses(courseRes.data || []);
+      setSubjects(subRes.data || []);
+    };
+    fetchTaxonomy();
+  }, []);
 
   const onDrop = useCallback(acceptedFiles => {
     if (acceptedFiles.length > 0) {
@@ -81,6 +102,7 @@ export const UploadMaterial = () => {
           title: formData.title,
           description: formData.description,
           type: formData.type,
+          subject_id: formData.subject_id || null,
           file_url: fileUrl,
           file_type: file.type,
           uploaded_by: user.id,
@@ -203,6 +225,47 @@ export const UploadMaterial = () => {
                 <option value="assignment">Assignment</option>
                 <option value="reference">Reference</option>
                 <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-slate-300">Department (Optional)</label>
+              <select
+                className="input"
+                value={selectedDept}
+                onChange={(e) => { setSelectedDept(e.target.value); setSelectedCourse(''); }}
+                disabled={uploading}
+              >
+                <option value="">— All Departments —</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-slate-300">Course (Optional)</label>
+              <select
+                className="input"
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                disabled={uploading}
+              >
+                <option value="">— All Courses —</option>
+                {courses
+                  .filter(c => !selectedDept || c.department_id === selectedDept)
+                  .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1 text-slate-300">Subject</label>
+              <select
+                className="input"
+                value={formData.subject_id}
+                onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
+                disabled={uploading}
+              >
+                <option value="">— Select Subject —</option>
+                {subjects.map(s => <option key={s.id} value={s.id}>{s.name}{s.code ? ` (${s.code})` : ''}{s.is_common ? ' · Common' : ''}</option>)}
               </select>
             </div>
           </div>
