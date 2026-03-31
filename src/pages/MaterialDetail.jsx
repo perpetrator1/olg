@@ -248,7 +248,7 @@ export const MaterialDetail = () => {
   const isPDF = material.file_url?.toLowerCase().endsWith('.pdf') || material.file_type === 'application/pdf';
   const isImage = material.file_url?.match(/\.(jpeg|jpg|png|gif)$/i) || material.file_type?.startsWith('image/');
   
-  const isOwner = !isRemote && user?.id === material.uploaded_by;
+  const isOwner = !isRemote && Boolean(user?.id) && user.id === material.uploaded_by;
   const lowerRole = role?.toLowerCase();
   const canManage = !isRemote && (lowerRole === 'admin' || lowerRole === 'teacher');
   const canReport = !isRemote && (lowerRole === 'student' || lowerRole === 'verifier');
