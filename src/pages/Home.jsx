@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Search, Filter, Download, ThumbsUp, FileText, Globe } from 'lucide-react';
 
-const DJANGO_GRID_URL = 'http://localhost:8000/api/federation/grid/';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const DJANGO_GRID_URL = `${API_BASE}/api/federation/grid/`;
 
 const MATERIAL_TYPES = [
   { label: 'Notes', value: 'notes' },
@@ -15,6 +16,7 @@ const MATERIAL_TYPES = [
 
 export const Home = () => {
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,12 +172,10 @@ export const Home = () => {
               return (
                 <div
                   key={`${m.instance_id || 'local'}-${m.id}`}
-                  className={`card p-5 flex flex-col h-full ${
-                    isRemote
-                      ? 'border-t-2 border-t-indigo-500/70 opacity-95'
-                      : 'card-hover cursor-pointer'
+                  className={`card p-5 flex flex-col h-full card-hover cursor-pointer ${
+                    isRemote ? 'border-t-2 border-t-indigo-500/70 opacity-95' : ''
                   }`}
-                  onClick={!isRemote ? () => window.location.href = `/materials/${m.id}` : undefined}
+                  onClick={() => navigate(`/materials/${m.id}`, { state: { material: m, isRemote } })}
                 >
                   {/* Header row: type badge + instance badge */}
                   <div className="flex justify-between items-start mb-3 gap-2">
@@ -212,27 +212,14 @@ export const Home = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {/* Remote notes: show download button; local: show stats */}
-                      {isRemote ? (
-                        <a
-                          href={m.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="btn btn-primary btn-sm flex items-center gap-1.5 text-xs h-7 px-3"
-                        >
-                          <Download className="h-3 w-3" /> Download
-                        </a>
-                      ) : (
-                        <div className="flex gap-3 text-slate-400 text-xs">
-                          <div className="flex items-center gap-1">
-                            <Download className="h-3 w-3" /> {m.download_count || 0}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <ThumbsUp className="h-3 w-3" /> {m.upvotes || 0}
-                          </div>
+                      <div className="flex gap-3 text-slate-400 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Download className="h-3 w-3" /> {m.download_count || 0}
                         </div>
-                      )}
+                        <div className="flex items-center gap-1">
+                          <ThumbsUp className="h-3 w-3" /> {m.upvotes || 0}
+                        </div>
+                      </div>
                     </div>
                   </div>
 

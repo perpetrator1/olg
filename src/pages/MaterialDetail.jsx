@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -12,6 +12,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/b
 export const MaterialDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, user, role } = useAuth();
   
   const [material, setMaterial] = useState(null);
@@ -28,9 +29,17 @@ export const MaterialDetail = () => {
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Derived state for federation
+  const isRemote = location.state?.isRemote || false;
+
   useEffect(() => {
-    fetchMaterial();
-  }, [id]);
+    if (location.state?.material) {
+      setMaterial(location.state.material);
+      setLoading(false);
+    } else {
+      fetchMaterial();
+    }
+  }, [id, location.state]);
 
   const fetchMaterial = async () => {
     try {
@@ -61,6 +70,11 @@ export const MaterialDetail = () => {
   const handleDownload = async () => {
     if (!session) return toast.error('Please login to download');
     
+    if (isRemote) {
+      window.open(material.file_url, '_blank');
+      return;
+    }
+
     try {
       // Increment download count
       await supabase.rpc('increment_download', { row_id: id });
@@ -75,6 +89,7 @@ export const MaterialDetail = () => {
 
   const handleUpvote = async () => {
     if (!session) return toast.error('Please login to upvote');
+    if (isRemote) return toast.error('Cannot upvote materials from other instances directly');
     try {
       await supabase.rpc('increment_upvote', { row_id: id });
       setMaterial(prev => ({ ...prev, upvotes: prev.upvotes + 1 }));
@@ -233,10 +248,10 @@ export const MaterialDetail = () => {
   const isPDF = material.file_url?.toLowerCase().endsWith('.pdf') || material.file_type === 'application/pdf';
   const isImage = material.file_url?.match(/\.(jpeg|jpg|png|gif)$/i) || material.file_type?.startsWith('image/');
   
-  const isOwner = user?.id === material.uploaded_by;
+  const isOwner = !isRemote && user?.id === material.uploaded_by;
   const lowerRole = role?.toLowerCase();
-  const canManage = lowerRole === 'admin' || lowerRole === 'teacher';
-  const canReport = lowerRole === 'student' || lowerRole === 'verifier';
+  const canManage = !isRemote && (lowerRole === 'admin' || lowerRole === 'teacher');
+  const canReport = !isRemote && (lowerRole === 'student' || lowerRole === 'verifier');
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -346,7 +361,16 @@ export const MaterialDetail = () => {
               </div>
             ) : (
               <>
-                <h1 className="text-2xl font-bold text-white mb-2 leading-tight">{material.title}</h1>
+                <h1 className="text-2xl font-bold text-white mb-2 leading-tight">
+                  <span className="flex items-center gap-2">
+                    {material.title}
+                    {isRemote && material.instance_name && (
+                      <span className="text-[10px] font-medium text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider mb-1">
+                        From {material.instance_name}
+                      </span>
+                    )}
+                  </span>
+                </h1>
                 <p className="text-slate-400 text-sm mb-6 whitespace-pre-wrap leading-relaxed">{material.description || 'No description provided.'}</p>
               </>
             )}

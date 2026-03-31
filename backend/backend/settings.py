@@ -13,6 +13,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-in-produ
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+    ALLOWED_HOSTS.append(os.environ['RENDER_EXTERNAL_HOSTNAME'])
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
@@ -25,6 +27,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.common.CommonMiddleware',
 ]
 
@@ -59,6 +62,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5174',
     'http://localhost:5175',
 ]
+if 'VITE_VERCEL_URL' in os.environ:
+    CORS_ALLOWED_ORIGINS.append(os.environ['VITE_VERCEL_URL'])
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Be more permissive in dev
 
 # ── REST Framework ────────────────────────────────────────────────────────
@@ -71,6 +76,7 @@ REST_FRAMEWORK = {
 }
 
 STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'

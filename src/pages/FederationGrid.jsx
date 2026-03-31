@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Globe, Download, ExternalLink, ServerCrash, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Globe, Download, ExternalLink, ServerCrash, RefreshCw, ThumbsUp } from 'lucide-react';
 
-const DJANGO_GRID_URL = 'http://localhost:8000/api/federation/grid/';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const DJANGO_GRID_URL = `${API_BASE}/api/federation/grid/`;
 
 export const FederationGrid = () => {
+  const navigate = useNavigate();
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState({ total_peers: 0, successful_peers: 0, failed_peers: 0, errors: [] });
@@ -125,11 +128,12 @@ export const FederationGrid = () => {
             return (
               <div
                 key={`${m.instance_id}-${m.id}`}
-                className={`card flex flex-col h-full border-t-4 ${
-                  isLocal ? 'border-t-amber-500' : 'border-t-indigo-500'
+                className={`card p-5 flex flex-col h-full card-hover cursor-pointer ${
+                  isLocal ? 'border-t-2 border-t-amber-500' : 'border-t-2 border-t-indigo-500/70 opacity-95'
                 }`}
+                onClick={() => navigate(`/materials/${m.id}`, { state: { material: m, isRemote: !isLocal } })}
               >
-                <div className="p-5 flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-3 gap-2">
                     <span className="badge badge-primary uppercase text-[10px] tracking-wider shrink-0">
                       {m.type?.replace('_', ' ')}
@@ -151,18 +155,26 @@ export const FederationGrid = () => {
                     {m.description || 'No description provided.'}
                   </p>
 
-                  <div className="pt-4 border-t border-slate-700/50 flex justify-between items-center mt-auto">
-                    <span className="text-xs text-slate-400 truncate max-w-[120px]">
-                      By {m.profiles?.full_name || m.profiles?.username || 'Unknown'}
-                    </span>
-                    <a
-                      href={m.file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary btn-sm flex items-center gap-2 text-xs h-8 px-3 shrink-0"
-                    >
-                      <Download className="h-3 w-3" /> Get File
-                    </a>
+                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-full bg-slate-700 flex items-center justify-center text-xs font-medium text-white">
+                        {(m.profiles?.full_name || m.profiles?.username || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-xs text-slate-300 truncate max-w-[100px]">
+                        {m.profiles?.full_name || m.profiles?.username || 'Unknown'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-3 text-slate-400 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Download className="h-3 w-3" /> {m.download_count || 0}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <ThumbsUp className="h-3 w-3" /> {m.upvotes || 0}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
