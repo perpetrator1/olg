@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Settings, Activity, Server, FileText, Database, CheckCircle, XCircle, Info, Plus, Pencil, Trash2, Check } from 'lucide-react';
+import { Users, Settings, Activity, Server, FileText, Database, CheckCircle, XCircle, Info, Plus, Pencil, Trash2, Check, Globe } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -972,52 +972,247 @@ const AuditLogTab = () => {
   );
 };
 
-const InstanceSettingsTab = () => (
-  <div className="space-y-6">
-    <div className="card p-6">
-      <h3 className="text-xl font-bold mb-4">Local Instance Settings</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium mb-1 text-slate-300">Instance Name</label>
-          <input type="text" className="input" defaultValue="Open Learning Grid (Local)" />
-        </div>
-        <div className="flex items-end">
-          <label className="flex items-center gap-2 cursor-pointer pt-2">
-            <input type="checkbox" className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent w-5 h-5" defaultChecked />
+const InstanceSettingsTab = () => {
+  const { user: currentUser } = useAuth();
+  const [peers, setPeers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [newPeer, setNewPeer] = useState({ name: '', supabase_url: '', anon_key: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchPeers(); }, []);
+
+  const fetchPeers = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('federated_instances')
+        .select('id, name, supabase_url, status, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPeers(data || []);
+    } catch (e) {
+      toast.error('Failed to load peer nodes: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddPeer = async () => {
+    if (!newPeer.name.trim()) return toast.error('Instance name is required');
+    if (!newPeer.supabase_url.trim()) return toast.error('Supabase URL is required');
+    if (!newPeer.anon_key.trim()) return toast.error('Anon key is required');
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('federated_instances').insert({
+        name: newPeer.name.trim(),
+        supabase_url: newPeer.supabase_url.trim().replace(/\/$/, ''),
+        anon_key: newPeer.anon_key.trim(),
+        status: 'active',
+        added_by: currentUser.id,
+      });
+      if (error) throw error;
+      toast.success(`Peer "${newPeer.name}" added to the Circle`);
+      setNewPeer({ name: '', supabase_url: '', anon_key: '' });
+      setShowAddForm(false);
+      fetchPeers();
+    } catch (e) {
+      toast.error('Failed to add peer: ' + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (peer) => {
+    const next = peer.status === 'active' ? 'inactive' : 'active';
+    try {
+      const { error } = await supabase
+        .from('federated_instances')
+        .update({ status: next })
+        .eq('id', peer.id);
+      if (error) throw error;
+      toast.success(`"${peer.name}" set to ${next}`);
+      fetchPeers();
+    } catch (e) {
+      toast.error('Failed to update status: ' + e.message);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    try {
+      const { error } = await supabase.from('federated_instances').delete().eq('id', id);
+      if (error) throw error;
+      toast.success(`"${name}" removed from the Circle`);
+      setDeleteConfirmId(null);
+      fetchPeers();
+    } catch (e) {
+      toast.error('Failed to remove peer: ' + e.message);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Local settings card (cosmetic — env-backed in reality) */}
+      <div className="card p-6">
+        <h3 className="text-xl font-bold mb-1">Local Instance Settings</h3>
+        <p className="text-slate-400 text-sm mb-5">
+          Set your instance name in <code className="text-slate-300 bg-slate-800 px-1 rounded">backend/.env</code> as{' '}
+          <code className="text-slate-300 bg-slate-800 px-1 rounded">INSTANCE_NAME=My College</code>.
+        </p>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent w-5 h-5"
+              defaultChecked
+            />
             <span className="text-slate-300 font-medium">Allow Open Registration</span>
           </label>
         </div>
       </div>
-      <button className="btn btn-primary mt-6">Save Settings</button>
-    </div>
 
-    <div className="card p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold">Federated Peers (The Grid)</h3>
-        <button className="btn btn-primary btn-sm">Add Peer Node</button>
-      </div>
-      <p className="text-slate-400 mb-6">Connect to other college instances by adding their Supabase URL and Anon Key.</p>
-      
-      <div className="table-container">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Node Name</th>
-              <th>Status</th>
-              <th>Added</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colSpan="4" className="text-center py-8 text-slate-500">No peer nodes configured.</td>
-            </tr>
-          </tbody>
-        </table>
+      {/* Federated Peers card */}
+      <div className="card p-6">
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              <Globe className="h-5 w-5 text-indigo-400" /> Circle — Federated Peers
+            </h3>
+            <p className="text-slate-400 text-sm mt-1">
+              Add other college instances by their Supabase URL and Anon Key. The backend will
+              transitively discover nodes in their circles too (up to 3 hops).
+            </p>
+          </div>
+          <button
+            className="btn btn-primary btn-sm shrink-0"
+            onClick={() => setShowAddForm(v => !v)}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            {showAddForm ? 'Cancel' : 'Add Instance'}
+          </button>
+        </div>
+
+        {/* Add form */}
+        {showAddForm && (
+          <div className="mt-4 mb-6 p-4 rounded-lg bg-indigo-500/5 border border-indigo-500/20 space-y-3">
+            <h4 className="text-sm font-semibold text-indigo-300 mb-3">New Circle Member</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Instance Name</label>
+                <input
+                  className="input text-sm"
+                  placeholder="e.g. State Engineering College"
+                  value={newPeer.name}
+                  onChange={e => setNewPeer(p => ({ ...p, name: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Supabase URL</label>
+                <input
+                  className="input text-sm font-mono"
+                  placeholder="https://xxx.supabase.co"
+                  value={newPeer.supabase_url}
+                  onChange={e => setNewPeer(p => ({ ...p, supabase_url: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Anon Key</label>
+                <input
+                  className="input text-sm font-mono"
+                  placeholder="eyJhbGci..."
+                  value={newPeer.anon_key}
+                  onChange={e => setNewPeer(p => ({ ...p, anon_key: e.target.value }))}
+                  type="password"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleAddPeer}
+                disabled={saving}
+              >
+                {saving ? 'Adding...' : 'Add to Circle'}
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowAddForm(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Peers table */}
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Instance Name</th>
+                <th>Supabase URL</th>
+                <th>Status</th>
+                <th>Added</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan="5" className="text-center py-8 text-slate-500">Loading peers...</td></tr>
+              ) : peers.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-10 text-slate-500">
+                    <Globe className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    No circle members yet. Add the first peer instance above.
+                  </td>
+                </tr>
+              ) : peers.map(p => (
+                <tr key={p.id}>
+                  <td className="font-medium">{p.name}</td>
+                  <td>
+                    <span className="text-xs font-mono text-slate-400 truncate max-w-[200px] block">
+                      {p.supabase_url}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${p.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="text-xs text-slate-500">
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </td>
+                  <td>
+                    {deleteConfirmId === p.id ? (
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs text-red-400">Remove?</span>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id, p.name)}>Yes</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setDeleteConfirmId(null)}>No</button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          className={`btn btn-sm ${p.status === 'active' ? 'btn-secondary' : 'btn-primary'}`}
+                          onClick={() => toggleStatus(p)}
+                        >
+                          {p.status === 'active' ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => setDeleteConfirmId(p.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const AdminPanel = () => {
   const { role } = useAuth();

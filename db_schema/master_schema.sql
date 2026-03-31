@@ -163,7 +163,9 @@ CREATE POLICY "materials_select" ON materials FOR SELECT USING (
 
 -- Insert
 DROP POLICY IF EXISTS "materials_insert" ON materials;
-CREATE POLICY "materials_insert" ON materials FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "materials_insert" ON materials FOR INSERT WITH CHECK (
+  auth.uid() = uploaded_by
+);
 
 -- Update
 DROP POLICY IF EXISTS "materials_update" ON materials;
@@ -246,7 +248,32 @@ CREATE POLICY "subjects_modify" ON subjects FOR ALL USING (
   )
 );
 
--- 5. PERFORMANCE INDEXES
+-- 5. STORAGE POLICIES (Supabase Storage)
+-- ============================================================
+-- These enable file uploads to the 'materials' bucket.
+
+-- Ensure the bucket exists
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('materials', 'materials', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Public read access
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'materials');
+
+-- Authenticated upload access
+DROP POLICY IF EXISTS "Authenticated Upload" ON storage.objects;
+CREATE POLICY "Authenticated Upload" ON storage.objects FOR INSERT WITH CHECK (
+  bucket_id = 'materials' AND auth.role() = 'authenticated'
+);
+
+-- Owner delete access
+DROP POLICY IF EXISTS "Owner Delete" ON storage.objects;
+CREATE POLICY "Owner Delete" ON storage.objects FOR DELETE USING (
+  bucket_id = 'materials' AND auth.uid() = owner
+);
+
+-- 6. PERFORMANCE INDEXES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_materials_status ON materials(status);
 CREATE INDEX IF NOT EXISTS idx_materials_created_at ON materials(created_at DESC);

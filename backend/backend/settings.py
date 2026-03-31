@@ -49,6 +49,9 @@ SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 # Fall back to anon key if service key is not provided
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', '')
 
+# Human-readable name for THIS instance (shown as the badge on locally-sourced notes)
+INSTANCE_NAME = os.environ.get('INSTANCE_NAME', 'Local Node')
+
 # ── CORS ──────────────────────────────────────────────────────────────────
 # Allow the Vite dev server to call our Django API
 CORS_ALLOWED_ORIGINS = [
